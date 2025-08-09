@@ -27,7 +27,7 @@ export class OpenAIClient {
                             Entry id: ${this.entryId}
                             If entry id is specified, you must talk about the current entry set, unless dismissed by the user.
 
-                            use displayBook function to show books to the user, if necessary send accompanied message`
+                            use displayBooks function to show books to the user, if necessary send accompanied message`
                 }
             ]
         }
@@ -53,13 +53,19 @@ export class OpenAIClient {
         const functionCallStack: ResponseInputItem[] = [];
 
         for (const item of items) {
-            if (item.type === "message") {
-                for (const content of item.content as ResponseOutputText[]) {
-                    this.messageListener(content.text);
-                }
-            }
-            if (item.type === "function_call") {
-                functionCallStack.push(item);
+            switch (item.type) {
+                case "message":
+                    for (const content of item.content as ResponseOutputText[]) {
+                        this.messageListener(content.text);
+                    }
+                    break;
+                case "function_call":
+                    functionCallStack.push(item);
+                    break;
+                default:
+                    // possibly reasoning, or other unnecessary processing
+                    console.log("Unhandled response item type:", item.type);
+                    break;
             }
         }
 
