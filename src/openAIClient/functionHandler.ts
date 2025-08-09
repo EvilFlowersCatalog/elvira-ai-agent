@@ -1,16 +1,17 @@
 import { ResponseFunctionToolCall, ResponseInputItem } from "openai/resources/responses/responses";
 import { OpenAIClient } from "./openaiClient";
+import { elviraClient } from "../elviraClient";
 
 async function displayBooks(client: OpenAIClient, options: { ids: string[] }) {
     client.displayBooksListener(options.ids);
 }
 
 async function getEntries(options: { page: number, limit: number }) {
-        
+    return await elviraClient.getEntries(options.page, options.limit);
 }
 
 async function getEntryDetails(options: { id: string }) {
-     
+    return await elviraClient.getEntryDetail(options.id);
 }
 
 export async function handleFunctionCalls(client: OpenAIClient, functionCallStack: ResponseFunctionToolCall[]): Promise<ResponseInputItem[]> {
