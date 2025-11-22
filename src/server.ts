@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { OpenAIClient } from './openAIClient/openaiClient';
 import bodyParser from 'body-parser';
 import cors from 'cors';
+import { ElviraClient } from './elviraClient';
 
 const app = express();
 app.use(bodyParser.json());
@@ -28,8 +29,12 @@ function getMessagesFromQueue(chatId: string) {
 app.post('/api/startchat', (req, res) => {
     const chatId = uuidv4();
     console.log(`First message at ${chatId}`)
-    const { entryId } = req.body;
+    const { entryId, apiKey } = req.body;
     messagesQueue[chatId] = [];
+    const elviraClient = new ElviraClient(apiKey); 
+    // TODO: test auth apiKey
+    // GET /api/v1/users/me
+    // store the user logged in session, log every message
     chatSessions[chatId] = new OpenAIClient(entryId, {
         messageListener: (message) => {
             console.log(`Agent@${chatId}:`, message);
@@ -38,13 +43,13 @@ app.post('/api/startchat', (req, res) => {
         displayBooksListener: (bookIds) => {
             messagesQueue[chatId].push({ type: 'entries', data: bookIds });
         }
-    })
+    }, elviraClient)
     res.json({ chatId });
 });
 
 // POST /api/sendchat - send a message to the chat
 app.post('/api/sendchat', async (req, res) => {
-    const { chatId, message, entryId } = req.body;
+    const { chatId, message, entryId, apiKey } = req.body;
 
     if (!chatId || !message) {
         return res.status(400).json({ error: 'chatId, message are required' });
@@ -54,6 +59,8 @@ app.post('/api/sendchat', async (req, res) => {
     if (!chatSession) {
         return res.status(404).json({ error: 'Chat session not found' });
     }
+
+    const autheniticated = chatSession.elviraClient.validateApiKey(apiKey);
 
     chatSession.setEntryId(entryId);
     console.log(`User@${chatId}:`, message);

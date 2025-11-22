@@ -8,15 +8,18 @@ class ElviraClient {
   private apiKey: string;
   private catalogId: string;
 
-  constructor() {
+  constructor(apiKey: string) {
     this.baseUrl = process.env.ELVIRA_BASE_URL || '';
-    this.apiKey = process.env.ELVIRA_API_KEY || '';
     this.catalogId = process.env.ELVIRA_CATALOG_ID || '';
-    if (!this.baseUrl || !this.apiKey || !this.catalogId) {
-      throw new Error('Missing ELVIRA_BASE_URL, ELVIRA_API_KEY, or ELVIRA_CATALOG_ID in environment variables');
+    this.apiKey = apiKey;
+    if (!this.baseUrl || !this.catalogId) {
+      throw new Error('Missing ELVIRA_BASE_URL, or ELVIRA_CATALOG_ID in environment variables');
     }
   }
 
+  validateApiKey(providedKey: string): boolean {
+    return this.apiKey === providedKey;
+  }
 
   async getEntries(page = 1, limit = 25, pagination = true) {
     const url = `${this.baseUrl}/api/v1/entries`;
@@ -41,4 +44,4 @@ class ElviraClient {
   }
 }
 
-export const elviraClient = new ElviraClient();
+export { ElviraClient };

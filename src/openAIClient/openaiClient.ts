@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { ResponseFunctionToolCall, ResponseInput, ResponseInputItem, ResponseOutputText } from 'openai/resources/responses/responses';
 import { getTools } from './tools';
 import { handleFunctionCalls } from './functionHandler';
+import { ElviraClient } from '../elviraClient';
 
 export class OpenAIClient {
     private entryId: string | null;
@@ -9,16 +10,18 @@ export class OpenAIClient {
     private chatHistory: ResponseInput;
     private messageListener: (message: string) => void;
     public displayBooksListener: (bookIds: string[]) => void;
+    public elviraClient: ElviraClient;
 
     constructor(entryId: string | null, listeners: {
         messageListener: (message: string) => void;
         displayBooksListener: (bookIds: string[]) => void;
-    }) {
+    }, elviraClient: ElviraClient) {
         this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         this.entryId = entryId;
         this.chatHistory = [];
         this.messageListener = listeners.messageListener;
         this.displayBooksListener = listeners.displayBooksListener;
+        this.elviraClient = elviraClient;
     }
 
     public getChatHistory(): ResponseInput {
