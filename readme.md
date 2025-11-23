@@ -129,16 +129,3 @@ npm run dev
 npm run build
 npm run start
 ```
-
-- If you'd like, I can also:
-	- Add an example `.env.example` file to the repo,
-	- Add Postman / curl examples to a `docs/` folder,
-	- Add a small frontend demo showing how to call `/api/startchat` and `/api/sendchat`.
-
-**Files to inspect for contributors**
-- **`package.json`** — scripts and dependencies.
-- **`Dockerfile`** — multi-stage Docker build used in production image.
-- **`tsconfig.json`** — TypeScript compiler settings.
-
----
-If you want, I can also generate a `docs/` folder with per-file details, or create API examples (curl + sample responses). Which would you prefer next?
