@@ -23,7 +23,7 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
-        IMAGE_NAME=ghcr.io/${{ toLower(github.repository_owner) }}/${{ toLower(github.event.repository.name) }}
+        IMAGE_NAME=ghcr.io/${{ lowercase(github.repository_owner) }}/${{ lowercase(github.event.repository.name) }}
         docker build . \
         --file Dockerfile \
         --tag $IMAGE_NAME 
