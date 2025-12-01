@@ -9,6 +9,7 @@ export class OpenAIClient {
     private openai: OpenAI;
     private chatHistory: ResponseInput;
     private messageListener: (message: string) => void;
+    public userId: string;
     public displayBooksListener: (bookIds: string[]) => void;
     public chunkListener: (msg_id: string, chunk: string) => void;
     public elviraClient: ElviraClient;
@@ -17,7 +18,7 @@ export class OpenAIClient {
         messageListener: (message: string) => void;
         displayBooksListener: (bookIds: string[]) => void;
         chunkListener: (msg_id: string, chunk: string) => void;
-    }, elviraClient: ElviraClient) {
+    }, elviraClient: ElviraClient, userId: string) {
         this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         this.entryId = entryId;
         this.chatHistory = [];
@@ -25,6 +26,7 @@ export class OpenAIClient {
         this.displayBooksListener = listeners.displayBooksListener;
         this.chunkListener = listeners.chunkListener;
         this.elviraClient = elviraClient;
+        this.userId = userId;
     }
 
     public getChatHistory(): ResponseInput {
@@ -47,7 +49,12 @@ export class OpenAIClient {
                     getEntries – Browse multiple entries with pagination (page number and limit).
                     displayBooks – Show books in the UI based on their unique book IDs. Always send a helpful message alongside the displayed results.
 
-                Use the tools only when needed, and always make your explanations clear, concise, and user-friendly.`
+                Use the tools only when needed, and always make your explanations clear, concise, and user-friendly.
+                
+                When user asks for anything else, not related to the library entries, respond politely that you are here to help with library-related inquiries only.
+                Don't mention anything about AI or language models. Don't help with coding or technical questions.
+                You may respond with markdown formatting for better readability.                
+                `
     }
 
 
