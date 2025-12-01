@@ -10,17 +10,20 @@ export class OpenAIClient {
     private chatHistory: ResponseInput;
     private messageListener: (message: string) => void;
     public displayBooksListener: (bookIds: string[]) => void;
+    public chunkListener: (msg_id: string, chunk: string) => void;
     public elviraClient: ElviraClient;
 
     constructor(entryId: string | null, listeners: {
         messageListener: (message: string) => void;
         displayBooksListener: (bookIds: string[]) => void;
+        chunkListener: (msg_id: string, chunk: string) => void;
     }, elviraClient: ElviraClient) {
         this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         this.entryId = entryId;
         this.chatHistory = [];
         this.messageListener = listeners.messageListener;
         this.displayBooksListener = listeners.displayBooksListener;
+        this.chunkListener = listeners.chunkListener;
         this.elviraClient = elviraClient;
     }
 
@@ -59,10 +62,23 @@ export class OpenAIClient {
                 },
                 "verbosity": "medium"
             },
-            tools: getTools()
+            tools: getTools(),
+            stream: true
         });
 
-        const items: ResponseInputItem[] = response.output;
+        let items: ResponseInputItem[] = [];
+
+        for await (const chunk of response) {
+            if (chunk.type == "response.output_text.delta") {
+                if ('delta' in chunk) {
+                    this.chunkListener(chunk.item_id, chunk.delta);
+                }
+            }
+            else if (chunk.type == "response.completed") {
+                items.push(...chunk.response.output);
+            }
+        }
+
         this.chatHistory.push(...items);
 
         const functionCallStack: ResponseInputItem[] = [];
