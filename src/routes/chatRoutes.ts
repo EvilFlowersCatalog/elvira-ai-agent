@@ -1,14 +1,15 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthenticatedRequest } from '../types';
-import { userAuth, validateSessionApiKey } from '../middleware/auth';
+import { validateSessionApiKey } from '../middleware/auth';
 import {
   createSession,
   getSession,
   getMessageQueueLength,
   getMessageAtIndex
 } from '../services/sessionManager';
-import { logMessage, getUser } from '../accounts';
+import { logMessage, getUser, initUser } from '../accounts';
+import { ElviraClient } from '../elviraClient';
 
 const router = Router();
 
@@ -16,16 +17,40 @@ const router = Router();
  * POST /api/startchat
  * Starts a new chat session
  */
-router.post('/startchat', userAuth, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/startchat', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const chatId = uuidv4();
-    const { entryId } = req.body;
+    const { apiKey, entryId, catalogId } = req.body;
 
+    if (!apiKey) {
+      res.status(401).json({ error: 'API key required' });
+      return;
+    }
+
+    if (!catalogId) {
+      res.status(400).json({ error: 'Catalog ID required' });
+      return;
+    }
+
+    const elviraClient = new ElviraClient(apiKey, catalogId);
+    const user = await elviraClient.getCurrentUserInfo();
+
+    if (!user || !user.id) {
+      res.status(401).json({ error: 'Invalid API key or user not found' });
+      return;
+    }
+
+    initUser(user);
+    
+    const localUser = getUser(user.id);
+    if (localUser?.blocked) {
+      console.warn(`Blocked user attempted access: ${user.id}`);
+      res.status(403).json({ error: 'User is blocked' });
+      return;
+    }
+    
     console.log(`Starting new chat: ${chatId}`);
-
-    // Create the chat session
-    createSession(chatId, entryId || null, req.elviraClient!, req.user!.id);
-
+    createSession(chatId, entryId || null, elviraClient, user.id);
     res.json({ chatId });
   } catch (err) {
     console.error('Error starting chat:', err);

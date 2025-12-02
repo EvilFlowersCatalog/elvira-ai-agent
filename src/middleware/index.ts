@@ -1,1 +1,1 @@
-export { userAuth, adminAuth, validateSessionApiKey } from './auth';
+export { adminAuth, validateSessionApiKey } from './auth';

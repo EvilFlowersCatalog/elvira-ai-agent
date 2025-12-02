@@ -1,7 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { ElviraClient } from '../elviraClient';
 import { AuthenticatedRequest, AdminRequest } from '../types';
-import { initUser, getUser } from '../accounts';
 
 /**
  * Extracts API key from various sources in the request
@@ -29,52 +28,6 @@ function extractApiKey(req: AuthenticatedRequest): string | undefined {
   }
 
   return undefined;
-}
-
-/**
- * Middleware to authenticate users via Elvira API
- * Adds elviraClient and user to the request object
- */
-export async function userAuth(
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    const apiKey = extractApiKey(req);
-
-    if (!apiKey) {
-      res.status(401).json({ error: 'API key required' });
-      return;
-    }
-
-    const elviraClient = new ElviraClient(apiKey);
-    const user = await elviraClient.getCurrentUserInfo();
-
-    if (!user || !user.id) {
-      res.status(401).json({ error: 'Invalid API key or user not found' });
-      return;
-    }
-
-    // Initialize user in local store if not exists
-    initUser(user);
-
-    // Check if user is blocked
-    const localUser = getUser(user.id);
-    if (localUser?.blocked) {
-      console.warn(`Blocked user attempted access: ${user.id}`);
-      res.status(403).json({ error: 'User is blocked' });
-      return;
-    }
-
-    req.elviraClient = elviraClient;
-    req.user = user;
-    req.apiKey = apiKey;
-    next();
-  } catch (err) {
-    console.error('User auth error:', err);
-    res.status(401).json({ error: 'Invalid API key or unable to verify user' });
-  }
 }
 
 /**

@@ -8,10 +8,10 @@ export class ElviraClient {
   private baseUrl: string;
   private apiKey: string;
   private catalogId: string;
-
-  constructor(apiKey: string) {
+  
+  constructor(apiKey: string, catalogId?: string) {
     this.baseUrl = process.env.ELVIRA_BASE_URL || '';
-    this.catalogId = process.env.ELVIRA_CATALOG_ID || '';
+    this.catalogId = catalogId || '';
     this.apiKey = apiKey;
 
     if (!this.baseUrl || !this.catalogId) {
