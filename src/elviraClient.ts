@@ -31,20 +31,41 @@ export class ElviraClient {
   }
 
   /**
-   * Get entries with pagination
+   * Get entries with pagination and filtering support
+   * Supports filtering by: title, summary, category, author, language, date range, readium status, and custom query
    */
-  async getEntries(page = 1, limit = 25, pagination = true) {
+  async getEntries(
+    page = 1,
+    limit = 25,
+    filters?: {
+      title?: string;
+      summary?: string;
+      category_term?: string;
+      author?: string;
+      language_code?: string;
+      published_at__gte?: string;
+      published_at__lte?: string;
+      config__readium_enabled?: boolean;
+      query?: string;
+    }
+  ) {
     const url = `${this.baseUrl}/api/v1/entries`;
     try {
+      console.log(`ElviraClient.getEntries: Fetching entries from ${url}`);
+      
+      const params: Record<string, any> = {
+        catalog_id: this.catalogId,
+        page,
+        limit,
+        pagination: true,
+        ...filters,
+      };
+
       const res = await axios.get(url, {
         headers: { 'Authorization': `Bearer ${this.apiKey}` },
-        params: {
-          catalog_id: this.catalogId,
-          page,
-          limit,
-          pagination
-        }
+        params,
       });
+      console.log(`ElviraClient.getEntries: Retrieved ${res.data?.items.length || 0} entries`);
       return res.data;
     } catch (error) {
       this.handleApiError(error, 'getEntries');
@@ -62,9 +83,11 @@ export class ElviraClient {
 
     const url = `${this.baseUrl}/api/v1/catalogs/${this.catalogId}/entries/${entryId}`;
     try {
+      console.log(`ElviraClient.getEntryDetail: Fetching entry detail from ${url}`);
       const res = await axios.get(url, {
         headers: { 'Authorization': `Bearer ${this.apiKey}` }
       });
+      console.log(`ElviraClient.getEntryDetail: Retrieved entry: `, res.data?.response.title);
       return res.data;
     } catch (error) {
       this.handleApiError(error, 'getEntryDetail');

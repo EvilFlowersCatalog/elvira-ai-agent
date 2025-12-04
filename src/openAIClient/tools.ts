@@ -24,7 +24,7 @@ export function getTools(): Array<Tool> {
         {
             "type": "function",
             "name": "getEntries",
-            "description": "Elvira - Retrieve entries with pagination support",
+            "description": "Elvira - Retrieve entries with pagination and filtering support",
             "strict": true,
             "parameters": {
                 "type": "object",
@@ -36,6 +36,42 @@ export function getTools(): Array<Tool> {
                     "limit": {
                         "type": "integer",
                         "description": "Number of entries per page"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Filter by title (unaccent, icontains)"
+                    },
+                    "summary": {
+                        "type": "string",
+                        "description": "Filter by summary (unaccent, icontains)"
+                    },
+                    "category_term": {
+                        "type": "string",
+                        "description": "Filter by category_term (exact)"
+                    },
+                    "author": {
+                        "type": "string",
+                        "description": "Filter by author (exact)"
+                    },
+                    "language_code": {
+                        "type": "string",
+                        "description": "Filter by language_code (exact)"
+                    },
+                    "published_at__gte": {
+                        "type": "string",
+                        "description": "Filter by published date greater than or equal (ISO 8601 format)"
+                    },
+                    "published_at__lte": {
+                        "type": "string",
+                        "description": "Filter by published date less than or equal (ISO 8601 format)"
+                    },
+                    "config__readium_enabled": {
+                        "type": "boolean",
+                        "description": "Filter by readium enabled status"
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Filter by query (exact)"
                     }
                 },
                 "required": [

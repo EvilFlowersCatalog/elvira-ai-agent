@@ -26,3 +26,46 @@ export interface ChatSessionListeners {
   displayBooksListener: (bookIds: string[]) => void;
   chunkListener: (msg_id: string, chunk: string) => void;
 }
+
+// Entry filtering options
+export interface EntryFilterOptions {
+  title?: string;
+  summary?: string;
+  category_term?: string;
+  author?: string;
+  language_code?: string;
+  published_at__gte?: string;
+  published_at__lte?: string;
+  config__readium_enabled?: boolean;
+  query?: string;
+}
+
+// Entry query parameters
+export interface EntryQueryParams {
+  page: number;
+  limit: number;
+  filters?: EntryFilterOptions;
+}
+
+// Entry response from Elvira API
+export interface EntryResponse {
+  id: string;
+  title: string;
+  summary?: string;
+  author?: string;
+  category?: string;
+  language_code?: string;
+  published_at?: string;
+  config?: {
+    readium_enabled?: boolean;
+  };
+  [key: string]: any;
+}
+
+// Entries list response
+export interface EntriesListResponse {
+  items: EntryResponse[];
+  total: number;
+  page: number;
+  limit: number;
+}
