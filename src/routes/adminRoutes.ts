@@ -20,7 +20,7 @@ router.get('/users', adminAuth, async (req: AdminRequest, res: Response) => {
   const limit = parseInt(req.query.limit as string) || 25;
 
   try {
-    const data = getUsersPaginated(page, limit);
+    const data = await getUsersPaginated(page, limit);
     res.json(data);
   } catch (err) {
     console.error('Error fetching users:', err);
@@ -36,7 +36,7 @@ router.get('/users/:userId/chats', adminAuth, async (req: AdminRequest, res: Res
   const { userId } = req.params;
 
   try {
-    const chats = getChatsByUser(userId);
+    const chats = await getChatsByUser(userId);
     res.json({ chats });
   } catch (err) {
     console.error('Error listing user chats:', err);
@@ -48,11 +48,11 @@ router.get('/users/:userId/chats', adminAuth, async (req: AdminRequest, res: Res
  * GET /admin/users/:userId/chats/:chatId
  * Get message history for a user in a specific chat
  */
-router.get('/users/:userId/chats/:chatId', adminAuth, (req: AdminRequest, res: Response) => {
+router.get('/users/:userId/chats/:chatId', adminAuth, async (req: AdminRequest, res: Response) => {
   const { userId, chatId } = req.params;
 
   try {
-    const history = getUserMessagesInChat(chatId, userId);
+    const history = await getUserMessagesInChat(chatId, userId);
     res.json({ history });
   } catch (err) {
     console.error('Error fetching chat history:', err);
@@ -72,7 +72,7 @@ router.post('/users/block', adminAuth, async (req: AdminRequest, res: Response) 
   }
 
   try {
-    const result = setUserBlocked(userId, blocked);
+    const result = await setUserBlocked(userId, blocked);
 
     if (!result) {
       return res.status(404).json({ error: 'User not found' });
@@ -80,7 +80,7 @@ router.post('/users/block', adminAuth, async (req: AdminRequest, res: Response) 
 
     // If blocking, terminate all active sessions for this user
     if (blocked) {
-      const terminatedChats = terminateUserSessions(userId);
+      const terminatedChats = await terminateUserSessions(userId);
       console.log(`Terminated ${terminatedChats.length} sessions for blocked user ${userId}`);
     }
 

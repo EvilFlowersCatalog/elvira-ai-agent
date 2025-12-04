@@ -69,3 +69,31 @@ export interface EntriesListResponse {
   page: number;
   limit: number;
 }
+
+// Daily Limit types
+export interface DailyLimit {
+  id: string;
+  user_id: string;
+  date: string;
+  messages_used: number;
+  messages_limit: number;
+  tokens_used: number;
+  tokens_limit: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Usage statistics
+export interface UsageCheck {
+  allowed: boolean;
+  remaining: number;
+  limit: number;
+  resetAt: string;
+}
+
+// Query weight analysis
+export interface QueryWeightAnalysis {
+  weight: number;
+  category: 'library_related' | 'other' | 'complex';
+  reason: string;
+}

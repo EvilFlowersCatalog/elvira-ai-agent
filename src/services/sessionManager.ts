@@ -56,10 +56,10 @@ export function hasSession(chatId: string): boolean {
 /**
  * Removes a chat session and its message queue
  */
-export function removeSession(chatId: string): void {
+export async function removeSession(chatId: string): Promise<void> {
   delete chatSessions[chatId];
   delete messagesQueues[chatId];
-  clearChatHistory(chatId);
+  await clearChatHistory(chatId);
 }
 
 /**
@@ -87,13 +87,13 @@ export function getMessageAtIndex(chatId: string, index: number): MessageQueueIt
  * Terminates all sessions for a specific user
  * Used when blocking a user
  */
-export function terminateUserSessions(userId: string): string[] {
+export async function terminateUserSessions(userId: string): Promise<string[]> {
   const terminatedChats: string[] = [];
 
   for (const [chatId, session] of Object.entries(chatSessions)) {
     if (session.userId === userId) {
       console.log(`Terminating active session ${chatId} for user ${userId}`);
-      removeSession(chatId);
+      await removeSession(chatId);
       terminatedChats.push(chatId);
     }
   }

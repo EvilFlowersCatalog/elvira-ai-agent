@@ -40,9 +40,9 @@ router.post('/startchat', async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    initUser(user);
+    await initUser(user);
     
-    const localUser = getUser(user.id);
+    const localUser = await getUser(user.id);
     if (localUser?.blocked) {
       console.warn(`Blocked user attempted access: ${user.id}`);
       res.status(403).json({ error: 'User is blocked' });
@@ -80,7 +80,7 @@ router.post('/sendchat', async (req, res: Response) => {
   }
 
   // Check whether the user who owns this session is blocked
-  const owner = getUser(chatSession.userId);
+  const owner = await getUser(chatSession.userId);
   if (owner?.blocked) {
     console.warn(`Blocked user attempted to send message in chat ${chatId}: ${chatSession.userId}`);
     return res.status(403).json({ error: 'User is blocked' });
@@ -104,7 +104,7 @@ router.post('/sendchat', async (req, res: Response) => {
   }
 
   console.log(`User@${chatId}:`, message);
-  logMessage(chatId, 'user', message, { userId: chatSession.userId });
+  await logMessage(chatId, 'user', message, { userId: chatSession.userId });
 
   try {
     let finished = false;
