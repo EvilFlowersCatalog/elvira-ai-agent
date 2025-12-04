@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { DatabaseAdapter, DailyLimit } from '../adapter';
 import { runMigrations } from '../migrations';
 import { DatabaseConfig } from '../config';
+import { Message, User } from '../../accounts';
 
 export class PostgresDatabaseAdapter implements DatabaseAdapter {
   private pool: Pool;

@@ -38,45 +38,54 @@ export function getTools(): Array<Tool> {
                         "description": "Number of entries per page"
                     },
                     "title": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Filter by title (unaccent, icontains)"
                     },
                     "summary": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Filter by summary (unaccent, icontains)"
                     },
                     "category_term": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Filter by category_term (exact)"
                     },
                     "author": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Filter by author (exact)"
                     },
                     "language_code": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Filter by language_code (exact)"
                     },
                     "published_at__gte": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Filter by published date greater than or equal (ISO 8601 format)"
                     },
                     "published_at__lte": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Filter by published date less than or equal (ISO 8601 format)"
                     },
                     "config__readium_enabled": {
-                        "type": "boolean",
+                        "type": ["boolean", "null"],
                         "description": "Filter by readium enabled status"
                     },
                     "query": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Filter by query (exact)"
                     }
                 },
                 "required": [
                     "page",
-                    "limit"
+                    "limit",
+                    'title',
+                    'author',
+                    'summary',
+                    'category_term',
+                    'language_code',
+                    'published_at__gte',
+                    'published_at__lte',
+                    'config__readium_enabled',
+                    'query'
                 ],
                 "additionalProperties": false
             }

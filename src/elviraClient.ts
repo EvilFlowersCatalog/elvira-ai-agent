@@ -14,8 +14,8 @@ export class ElviraClient {
     this.catalogId = catalogId || '';
     this.apiKey = apiKey;
 
-    if (!this.baseUrl || !this.catalogId) {
-      throw new Error('Missing ELVIRA_BASE_URL or ELVIRA_CATALOG_ID in environment variables');
+    if (!this.baseUrl) {
+      throw new Error('Missing ELVIRA_BASE_URL in environment variables');
     }
 
     if (!apiKey) {
@@ -52,7 +52,7 @@ export class ElviraClient {
     const url = `${this.baseUrl}/api/v1/entries`;
     try {
       console.log(`ElviraClient.getEntries: Fetching entries from ${url}`);
-      
+      console.log('With filters:', filters);
       const params: Record<string, any> = {
         catalog_id: this.catalogId,
         page,
