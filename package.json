@@ -5,12 +5,18 @@
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "tsc",
-    "start": "node out/index.js"
+    "start": "node out/index.js",
+    "migrate": "ts-node src/cli/migrate.ts up",
+    "migrate:down": "ts-node src/cli/migrate.ts down",
+    "migrate:rollback": "ts-node src/cli/migrate.ts rollback",
+    "migrate:reset": "ts-node src/cli/migrate.ts reset",
+    "migrate:status": "ts-node src/cli/migrate.ts status"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.2.1",
+    "@types/pg": "^8.15.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   },
@@ -21,6 +27,7 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "openai": "^5.12.2",
+    "pg": "^8.16.3",
     "uuid": "^11.1.0"
   }
 }

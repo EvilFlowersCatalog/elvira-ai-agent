@@ -9,19 +9,24 @@ export class OpenAIClient {
     private openai: OpenAI;
     private chatHistory: ResponseInput;
     private messageListener: (message: string) => void;
+    public userId: string;
     public displayBooksListener: (bookIds: string[]) => void;
+    public chunkListener: (msg_id: string, chunk: string) => void;
     public elviraClient: ElviraClient;
 
     constructor(entryId: string | null, listeners: {
         messageListener: (message: string) => void;
         displayBooksListener: (bookIds: string[]) => void;
-    }, elviraClient: ElviraClient) {
+        chunkListener: (msg_id: string, chunk: string) => void;
+    }, elviraClient: ElviraClient, userId: string) {
         this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         this.entryId = entryId;
         this.chatHistory = [];
         this.messageListener = listeners.messageListener;
         this.displayBooksListener = listeners.displayBooksListener;
+        this.chunkListener = listeners.chunkListener;
         this.elviraClient = elviraClient;
+        this.userId = userId;
     }
 
     public getChatHistory(): ResponseInput {
@@ -44,7 +49,12 @@ export class OpenAIClient {
                     getEntries – Browse multiple entries with pagination (page number and limit).
                     displayBooks – Show books in the UI based on their unique book IDs. Always send a helpful message alongside the displayed results.
 
-                Use the tools only when needed, and always make your explanations clear, concise, and user-friendly.`
+                Use the tools only when needed, and always make your explanations clear, concise, and user-friendly.
+                
+                When user asks for anything else, not related to the library entries, respond politely that you are here to help with library-related inquiries only.
+                Don't mention anything about AI or language models. Don't help with coding or technical questions.
+                You may respond with markdown formatting for better readability.                
+                `
     }
 
 
@@ -59,10 +69,23 @@ export class OpenAIClient {
                 },
                 "verbosity": "medium"
             },
-            tools: getTools()
+            tools: getTools(),
+            stream: true
         });
 
-        const items: ResponseInputItem[] = response.output;
+        let items: ResponseInputItem[] = [];
+
+        for await (const chunk of response) {
+            if (chunk.type == "response.output_text.delta") {
+                if ('delta' in chunk) {
+                    this.chunkListener(chunk.item_id, chunk.delta);
+                }
+            }
+            else if (chunk.type == "response.completed") {
+                items.push(...chunk.response.output);
+            }
+        }
+
         this.chatHistory.push(...items);
 
         const functionCallStack: ResponseInputItem[] = [];
