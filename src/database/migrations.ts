@@ -7,8 +7,7 @@ import { Pool } from 'pg';
 
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
-// Name of the migrations table (exported so other modules can reuse it)
-export const MIGRATIONS_TABLE_NAME = 'schema_migrations';
+export const MIGRATIONS_TABLE_NAME = 'assistant_migrations';
 
 export interface Migration {
   id: string;
