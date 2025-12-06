@@ -10,5 +10,6 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 COPY --from=build /app/out ./out
+COPY --from=build /app/database/migrations ./database/migrations
 EXPOSE 3000
 CMD ["npm", "run", "start"]
