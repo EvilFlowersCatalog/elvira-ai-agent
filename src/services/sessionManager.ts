@@ -1,7 +1,7 @@
 import { OpenAIClient } from '../openAIClient/openaiClient';
 import { ElviraClient } from '../elviraClient';
 import { MessageQueueItem, ChatSessionListeners } from '../types';
-import { clearChatHistory } from '../accounts';
+import { clearChatHistory, createChat, logMessage } from '../accounts';
 
 // In-memory stores for chat sessions and message queues
 const chatSessions: Record<string, OpenAIClient> = {};
@@ -10,12 +10,18 @@ const messagesQueues: Record<string, MessageQueueItem[]> = {};
 /**
  * Creates a new chat session with the given ID
  */
-export function createSession(
+export async function createSession(
   chatId: string,
   entryId: string | null,
   elviraClient: ElviraClient,
   userId: string
-): OpenAIClient {
+): Promise<OpenAIClient> {
+  // Create the chat in the database first (required for foreign key constraint)
+  const chat = await createChat(chatId, userId);
+  if (!chat) {
+    console.error(`Failed to create chat ${chatId} in database for user ${userId}`);
+  }
+
   // Initialize message queue for this chat
   messagesQueues[chatId] = [];
 
@@ -24,6 +30,10 @@ export function createSession(
     messageListener: (message: string) => {
       console.log(`Agent@${chatId}:`, message);
       messagesQueues[chatId].push({ type: 'message', data: message });
+      // Log agent message to database (fire and forget)
+      logMessage(chatId, 'agent', message, { userId }).catch((err) => {
+        console.error(`Failed to log agent message for chat ${chatId}:`, err);
+      });
     },
     displayBooksListener: (bookIds: string[]) => {
       messagesQueues[chatId].push({ type: 'entries', data: bookIds });

@@ -187,6 +187,50 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   }
 
   // Message/Chat operations
+  async createChat(
+    chatId: string,
+    userId: string,
+    title?: string
+  ): Promise<{ chatId: string; userId: string; startedAt: string } | null> {
+    try {
+      const query = `
+        INSERT INTO chats (id, user_id, title, started_at, is_active)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP, TRUE)
+        ON CONFLICT (id) DO NOTHING
+        RETURNING id, user_id, started_at;
+      `;
+
+      const result = await this.pool.query(query, [chatId, userId, title || null]);
+      
+      if (result.rows.length === 0) {
+        // Chat already exists, fetch it
+        const existingChat = await this.pool.query(
+          'SELECT id, user_id, started_at FROM chats WHERE id = $1',
+          [chatId]
+        );
+        if (existingChat.rows.length > 0) {
+          const row = existingChat.rows[0];
+          return {
+            chatId: row.id,
+            userId: row.user_id,
+            startedAt: row.started_at?.toISOString?.() || row.started_at,
+          };
+        }
+        return null;
+      }
+
+      const row = result.rows[0];
+      return {
+        chatId: row.id,
+        userId: row.user_id,
+        startedAt: row.started_at?.toISOString?.() || row.started_at,
+      };
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      return null;
+    }
+  }
+
   async logMessage(
     chatId: string,
     sender: 'user' | 'agent',

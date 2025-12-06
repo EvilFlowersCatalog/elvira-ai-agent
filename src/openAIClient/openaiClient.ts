@@ -9,6 +9,7 @@ export class OpenAIClient {
     private openai: OpenAI;
     private chatHistory: ResponseInput;
     private messageListener: (message: string) => void;
+    private lastTokensUsed: number = 0;
     public userId: string;
     public displayBooksListener: (bookIds: string[]) => void;
     public chunkListener: (msg_id: string, chunk: string) => void;
@@ -46,11 +47,12 @@ export class OpenAIClient {
 
                  You have access to the following tools:
                     getEntryDetails – Retrieve detailed information about a specific entry by its unique ID.
-                    getEntries – Browse multiple entries with pagination (page number and limit).
+                    getEntries – Browse multiple entries with pagination (page number and limit) and filters.
                     displayBooks – Show books in the UI based on their unique book IDs. Always send a helpful message alongside the displayed results.
 
                 Use the tools only when needed, and always make your explanations clear, concise, and user-friendly.
-                
+                When looking for entries, use filters to narrow down results based on user preferences, if no results are found, try using fewer or different filters again.
+
                 When user asks for anything else, not related to the library entries, respond politely that you are here to help with library-related inquiries only.
                 Don't mention anything about AI or language models. Don't help with coding or technical questions.
                 You may respond with markdown formatting for better readability.                
@@ -83,6 +85,10 @@ export class OpenAIClient {
             }
             else if (chunk.type == "response.completed") {
                 items.push(...chunk.response.output);
+                // Track token usage from the completed response
+                if (chunk.response.usage) {
+                    this.lastTokensUsed += chunk.response.usage.total_tokens || 0;
+                }
             }
         }
 
@@ -116,6 +122,9 @@ export class OpenAIClient {
     }
 
     public async chat(message: string) {
+        // Reset token counter for this interaction
+        this.lastTokensUsed = 0;
+        
         this.chatHistory.push({
             role: "user",
             content: [
@@ -130,5 +139,9 @@ export class OpenAIClient {
 
     public setEntryId(entryId: string | null) {
         this.entryId = entryId;
+    }
+
+    public getLastTokensUsed(): number {
+        return this.lastTokensUsed;
     }
 }

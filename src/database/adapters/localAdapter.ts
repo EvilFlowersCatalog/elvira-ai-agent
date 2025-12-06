@@ -50,6 +50,14 @@ export class LocalDatabaseAdapter implements DatabaseAdapter {
   }
 
   // Message/Chat operations (delegated to local store)
+  async createChat(
+    chatId: string,
+    userId: string,
+    title?: string
+  ): Promise<{ chatId: string; userId: string; startedAt: string } | null> {
+    return localStore.createChatLocal(chatId, userId, title);
+  }
+
   async logMessage(
     chatId: string,
     sender: 'user' | 'agent',

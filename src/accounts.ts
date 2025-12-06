@@ -110,6 +110,18 @@ export async function getUsersPaginated(page = 1, limit = 25): Promise<{
 // ============================================================
 
 /**
+ * Create a new chat in the database
+ */
+export async function createChat(
+  chatId: string,
+  userId: string,
+  title?: string
+): Promise<{ chatId: string; userId: string; startedAt: string } | null> {
+  const db = getDatabaseAdapter();
+  return db.createChat(chatId, userId, title);
+}
+
+/**
  * Log a message to a chat
  */
 export async function logMessage(
@@ -191,6 +203,7 @@ export default {
   updateUserLastSeen,
   listUsers,
   getUsersPaginated,
+  createChat,
   logMessage,
   getChatHistory,
   clearChatHistory,
