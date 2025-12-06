@@ -10,6 +10,7 @@ import {
 } from '../services/sessionManager';
 import { logMessage, getUser, initUser } from '../accounts';
 import { ElviraClient } from '../elviraClient';
+import { checkMessageQuota, recordMessageUsage } from '../services/dailyLimitManager';
 
 const router = Router();
 
@@ -50,7 +51,7 @@ router.post('/startchat', async (req: AuthenticatedRequest, res: Response) => {
     }
     
     console.log(`Starting new chat: ${chatId}`);
-    createSession(chatId, entryId || null, elviraClient, user.id);
+    await createSession(chatId, entryId || null, elviraClient, user.id);
     res.json({ chatId });
   } catch (err) {
     console.error('Error starting chat:', err);
@@ -86,6 +87,18 @@ router.post('/sendchat', async (req, res: Response) => {
     return res.status(403).json({ error: 'User is blocked' });
   }
 
+  // Check daily message quota before processing
+  const quotaCheck = await checkMessageQuota(chatSession.userId);
+  if (!quotaCheck.allowed) {
+    console.warn(`User ${chatSession.userId} exceeded daily message limit`);
+    return res.status(429).json({
+      error: 'Daily message limit exceeded',
+      remaining: quotaCheck.remaining,
+      limit: quotaCheck.limit,
+      resetAt: quotaCheck.resetAt
+    });
+  }
+
   // Validate API key matches the session
   if (!validateSessionApiKey(chatSession.elviraClient, apiKey)) {
     return res.status(401).json({ error: 'Invalid API key' });
@@ -116,8 +129,14 @@ router.post('/sendchat', async (req, res: Response) => {
       .catch((err: Error) => {
         chatError = err;
       })
-      .then(() => {
+      .then(async () => {
         finished = true;
+        // Record usage after successful processing
+        const tokensUsed = chatSession.getLastTokensUsed();
+        const usageRecorded = await recordMessageUsage(chatSession.userId, message, tokensUsed);
+        if (!usageRecorded) {
+          console.warn(`Failed to record usage for user ${chatSession.userId}`);
+        }
       });
 
     // Stream items as they appear in the message queue

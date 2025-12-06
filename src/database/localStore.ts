@@ -11,6 +11,7 @@ import { User, Message } from '../accounts';
 
 const users: Record<string, User> = {};
 const chats: Record<string, Message[]> = {};
+const chatsMetadata: Record<string, { chatId: string; userId: string; startedAt: string; title?: string }> = {};
 
 // ============================================================
 // User Management Functions
@@ -90,6 +91,32 @@ export function getUsersPaginatedLocal(page = 1, limit = 25): {
 // ============================================================
 // Message/Chat Logging Functions
 // ============================================================
+
+export function createChatLocal(
+  chatId: string,
+  userId: string,
+  title?: string
+): { chatId: string; userId: string; startedAt: string } | null {
+  if (!chatId || !userId) return null;
+
+  // If chat already exists, return the existing metadata
+  if (chatsMetadata[chatId]) {
+    return chatsMetadata[chatId];
+  }
+
+  const chatMeta = {
+    chatId,
+    userId,
+    startedAt: new Date().toISOString(),
+    title,
+  };
+
+  chatsMetadata[chatId] = chatMeta;
+  // Initialize empty messages array for this chat
+  chats[chatId] = chats[chatId] || [];
+
+  return chatMeta;
+}
 
 export function logMessageLocal(
   chatId: string,

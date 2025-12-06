@@ -31,6 +31,7 @@ export interface DatabaseAdapter {
   getUsersPaginated(page: number, limit: number): Promise<{ users: User[]; total: number; page: number; limit: number }>;
 
   // Message/Chat operations
+  createChat(chatId: string, userId: string, title?: string): Promise<{ chatId: string; userId: string; startedAt: string } | null>;
   logMessage(chatId: string, sender: 'user' | 'agent', text: string, opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number }): Promise<Message | null>;
   getChatHistory(chatId: string): Promise<Message[]>;
   clearChatHistory(chatId: string): Promise<void>;
