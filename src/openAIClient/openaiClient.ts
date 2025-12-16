@@ -8,7 +8,7 @@ export class OpenAIClient {
     private entryId: string | null;
     private openai: OpenAI;
     private chatHistory: ResponseInput;
-    private messageListener: (message: string) => void;
+    private messageListener: (message: string, msg_id?: string) => void;
     private lastTokensUsed: number = 0;
     public userId: string;
     public displayBooksListener: (bookIds: string[]) => void;
@@ -16,7 +16,7 @@ export class OpenAIClient {
     public elviraClient: ElviraClient;
 
     constructor(entryId: string | null, listeners: {
-        messageListener: (message: string) => void;
+        messageListener: (message: string, msg_id?: string) => void;
         displayBooksListener: (bookIds: string[]) => void;
         chunkListener: (msg_id: string, chunk: string) => void;
     }, elviraClient: ElviraClient, userId: string) {
@@ -50,9 +50,23 @@ export class OpenAIClient {
                     getEntries – Browse multiple entries with pagination (page number and limit) and filters.
                     displayBooks – Show books in the UI based on their unique book IDs. Always send a helpful message alongside the displayed results.
 
+                IMPORTANT: When you display books using displayBooks, the book IDs are automatically logged in the conversation in the format:
+                "[Displayed X book(s) with IDs: id1, id2, id3, ...]"
+                
+                You can reference these IDs later when the user asks about the displayed books. For example:
+                - "Tell me more about the first book" → Use getEntryDetails with the first ID from the list
+                - "What are these books about?" → Use getEntryDetails on the IDs you previously displayed
+                
+                Always check the conversation history for previously displayed book IDs before making new queries.
+
                 Use the tools only when needed, and always make your explanations clear, concise, and user-friendly.
                 When looking for entries, use filters to narrow down results based on user query and preferences. 
                 If no results are found, remove filters, broaden the search, and try again. Try to search in slovak and english.
+                Don't use multiple filters at once, use title only, unless the user specifies otherwise.
+                Don't filter using summary or description unless explicitly requested.
+
+                Categories: 
+                    - Null, (Don't use this filter yet)
 
                 When user asks for anything else, not related to the library entries, respond politely that you are here to help with library-related inquiries only.
                 Don't mention anything about AI or language models. Don't help with coding or technical questions.
@@ -100,8 +114,10 @@ export class OpenAIClient {
         for (const item of items) {
             switch (item.type) {
                 case "message":
+                    // Extract msg_id from the message item
+                    const msgId = 'id' in item ? item.id : undefined;
                     for (const content of item.content as ResponseOutputText[]) {
-                        this.messageListener(content.text);
+                        this.messageListener(content.text, msgId);
                     }
                     break;
                 case "function_call":

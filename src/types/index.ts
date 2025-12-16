@@ -22,7 +22,7 @@ export interface MessageQueueItem {
 
 // Chat session listeners
 export interface ChatSessionListeners {
-  messageListener: (message: string) => void;
+  messageListener: (message: string, msg_id?: string) => void;
   displayBooksListener: (bookIds: string[]) => void;
   chunkListener: (msg_id: string, chunk: string) => void;
 }

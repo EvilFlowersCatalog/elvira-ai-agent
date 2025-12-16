@@ -235,15 +235,15 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     chatId: string,
     sender: 'user' | 'agent',
     text: string,
-    opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number }
+    opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number; bookIds?: string[] }
   ): Promise<Message | null> {
     if (!chatId) return null;
 
     try {
       const query = `
-        INSERT INTO messages (id, chat_id, user_id, sender, text, entry_id, msg_id, weight, tokens_used, timestamp)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
-        RETURNING id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id;
+        INSERT INTO messages (id, chat_id, user_id, sender, text, entry_id, msg_id, weight, tokens_used, book_ids, timestamp)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
+        RETURNING id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids;
       `;
 
       const result = await this.pool.query(query, [
@@ -256,6 +256,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
         opts?.msg_id || null,
         opts?.weight || 1.0,
         opts?.tokensUsed || 0,
+        opts?.bookIds ? JSON.stringify(opts.bookIds) : null,
       ]);
 
       return this.rowToMessage(result.rows[0]);
@@ -268,7 +269,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   async getChatHistory(chatId: string): Promise<Message[]> {
     try {
       const result = await this.pool.query(
-        'SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id FROM messages WHERE chat_id = $1 ORDER BY timestamp ASC',
+        'SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids FROM messages WHERE chat_id = $1 ORDER BY timestamp ASC',
         [chatId]
       );
       return result.rows.map((row) => this.rowToMessage(row));
@@ -311,7 +312,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   async getUserMessagesInChat(chatId: string, userId: string): Promise<Message[]> {
     try {
       const result = await this.pool.query(
-        `SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id
+        `SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids
          FROM messages WHERE chat_id = $1 AND sender = 'user' AND user_id = $2
          ORDER BY timestamp ASC`,
         [chatId, userId]
@@ -454,6 +455,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       entryId: row.entry_id,
       msg_id: row.msg_id,
       userId: row.user_id,
+      bookIds: row.book_ids ? (typeof row.book_ids === 'string' ? JSON.parse(row.book_ids) : row.book_ids) : undefined,
     };
   }
 
