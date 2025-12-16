@@ -1,17 +1,100 @@
 /**
  * In-memory storage implementation for local development
  * This is used by the LocalDatabaseAdapter and avoids circular dependencies
+ * Data is persisted to /tmp directory as JSON files
  */
 import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';
+import * as path from 'path';
 import { User, Message } from '../accounts';
+
+// ============================================================
+// Persistence Configuration
+// ============================================================
+
+const STORAGE_DIR = path.join(process.platform === 'win32' ? (process.env.TEMP || 'C:\\temp') : '/tmp', 'elvira-agent');
+const USERS_FILE = path.join(STORAGE_DIR, 'users.json');
+const CHATS_FILE = path.join(STORAGE_DIR, 'chats.json');
+const CHATS_METADATA_FILE = path.join(STORAGE_DIR, 'chats_metadata.json');
+
+// Ensure storage directory exists
+if (!fs.existsSync(STORAGE_DIR)) {
+  fs.mkdirSync(STORAGE_DIR, { recursive: true });
+}
 
 // ============================================================
 // In-Memory Stores
 // ============================================================
 
-const users: Record<string, User> = {};
-const chats: Record<string, Message[]> = {};
-const chatsMetadata: Record<string, { chatId: string; userId: string; startedAt: string; title?: string }> = {};
+let users: Record<string, User> = {};
+let chats: Record<string, Message[]> = {};
+let chatsMetadata: Record<string, { chatId: string; userId: string; startedAt: string; title?: string }> = {};
+
+// ============================================================
+// Persistence Functions
+// ============================================================
+
+function saveUsers(): void {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Failed to save users to disk:', error);
+  }
+}
+
+function saveChats(): void {
+  try {
+    fs.writeFileSync(CHATS_FILE, JSON.stringify(chats, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Failed to save chats to disk:', error);
+  }
+}
+
+function saveChatsMetadata(): void {
+  try {
+    fs.writeFileSync(CHATS_METADATA_FILE, JSON.stringify(chatsMetadata, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Failed to save chats metadata to disk:', error);
+  }
+}
+
+function loadUsers(): void {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      const data = fs.readFileSync(USERS_FILE, 'utf-8');
+      users = JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Failed to load users from disk:', error);
+  }
+}
+
+function loadChats(): void {
+  try {
+    if (fs.existsSync(CHATS_FILE)) {
+      const data = fs.readFileSync(CHATS_FILE, 'utf-8');
+      chats = JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Failed to load chats from disk:', error);
+  }
+}
+
+function loadChatsMetadata(): void {
+  try {
+    if (fs.existsSync(CHATS_METADATA_FILE)) {
+      const data = fs.readFileSync(CHATS_METADATA_FILE, 'utf-8');
+      chatsMetadata = JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Failed to load chats metadata from disk:', error);
+  }
+}
+
+// Load data on module initialization
+loadUsers();
+loadChats();
+loadChatsMetadata();
 
 // ============================================================
 // User Management Functions
@@ -41,6 +124,7 @@ export function initUserLocal(user: User): User | null {
     };
   }
 
+  saveUsers();
   return users[user.id];
 }
 
@@ -62,12 +146,14 @@ export function setUserBlockedLocal(userId: string, blocked: boolean): User | nu
     return null;
   }
   users[userId].blocked = blocked;
+  saveUsers();
   return users[userId];
 }
 
 export function updateUserLastSeenLocal(userId: string): void {
   if (users[userId]) {
     users[userId].lastSeenAt = new Date().toISOString();
+    saveUsers();
   }
 }
 
@@ -115,6 +201,8 @@ export function createChatLocal(
   // Initialize empty messages array for this chat
   chats[chatId] = chats[chatId] || [];
 
+  saveChatsMetadata();
+  saveChats();
   return chatMeta;
 }
 
@@ -122,7 +210,7 @@ export function logMessageLocal(
   chatId: string,
   sender: 'user' | 'agent',
   text: string,
-  opts?: { entryId?: string; msg_id?: string; userId?: string }
+  opts?: { entryId?: string; msg_id?: string; userId?: string; bookIds?: string[] }
 ): Message | null {
   if (!chatId) return null;
 
@@ -135,11 +223,13 @@ export function logMessageLocal(
     entryId: opts?.entryId,
     msg_id: opts?.msg_id,
     userId: opts?.userId,
+    bookIds: opts?.bookIds,
   };
 
   chats[chatId] = chats[chatId] || [];
   chats[chatId].push(msg);
 
+  saveChats();
   return msg;
 }
 
@@ -149,6 +239,7 @@ export function getChatHistoryLocal(chatId: string): Message[] {
 
 export function clearChatHistoryLocal(chatId: string): void {
   delete chats[chatId];
+  saveChats();
 }
 
 export function getChatsByUserLocal(userId: string): { chatId: string; startedAt?: string }[] {

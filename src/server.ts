@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import chatRoutes from './routes/chatRoutes';
 import adminRoutes from './routes/adminRoutes';
+import userRoutes from './routes/userRoutes';
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(cors({
 // Routes
 app.use('/api', chatRoutes);
 app.use('/admin', adminRoutes);
+app.use('/user', userRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

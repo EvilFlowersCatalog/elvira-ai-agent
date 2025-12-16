@@ -6,7 +6,8 @@ import {
   createSession,
   getSession,
   getMessageQueueLength,
-  getMessageAtIndex
+  getMessageAtIndex,
+  resumeSession
 } from '../services/sessionManager';
 import { logMessage, getUser, initUser } from '../accounts';
 import { ElviraClient } from '../elviraClient';
@@ -164,6 +165,70 @@ router.post('/sendchat', async (req, res: Response) => {
     res.write(`data: ${JSON.stringify({ type: 'error', data: 'An unexpected error occurred' })}\n\n`);
   } finally {
     res.end();
+  }
+});
+
+/**
+ * POST /api/resumechat
+ * Resumes an existing chat session by loading its history from the database
+ */
+router.post('/resumechat', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { chatId, apiKey, entryId, catalogId } = req.body;
+
+    if (!chatId) {
+      res.status(400).json({ error: 'Chat ID required' });
+      return;
+    }
+
+    if (!apiKey) {
+      res.status(401).json({ error: 'API key required' });
+      return;
+    }
+
+    if (!catalogId) {
+      res.status(400).json({ error: 'Catalog ID required' });
+      return;
+    }
+
+    const elviraClient = new ElviraClient(apiKey, catalogId);
+    const user = await elviraClient.getCurrentUserInfo();
+
+    if (!user || !user.id) {
+      res.status(401).json({ error: 'Invalid API key or user not found' });
+      return;
+    }
+
+    await initUser(user);
+    
+    const localUser = await getUser(user.id);
+    if (localUser?.blocked) {
+      console.warn(`Blocked user attempted to resume chat: ${user.id}`);
+      res.status(403).json({ error: 'User is blocked' });
+      return;
+    }
+
+    // Verify the chat belongs to this user
+    const { getChatsByUser } = await import('../accounts');
+    const userChats = await getChatsByUser(user.id);
+    const chatBelongsToUser = userChats.some(chat => chat.chatId === chatId);
+    
+    if (!chatBelongsToUser) {
+      res.status(404).json({ error: 'Chat not found or does not belong to this user' });
+      return;
+    }
+    
+    console.log(`Resuming chat: ${chatId} for user ${user.id}`);
+    await resumeSession(chatId, entryId || null, elviraClient, user.id);
+    
+    res.json({ 
+      chatId,
+      resumed: true,
+      message: 'Chat session resumed successfully'
+    });
+  } catch (err) {
+    console.error('Error resuming chat:', err);
+    res.status(500).json({ error: 'Failed to resume chat session' });
   }
 });
 

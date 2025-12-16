@@ -12,6 +12,7 @@ function extractApiKey(req: AuthenticatedRequest): string | undefined {
     return authHeader.split(' ')[1];
   }
 
+
   // Check x-api-key header
   if (req.headers['x-api-key'] && typeof req.headers['x-api-key'] === 'string') {
     return req.headers['x-api-key'];
@@ -78,4 +79,46 @@ export function validateSessionApiKey(
   providedKey: string
 ): boolean {
   return sessionClient.validateApiKey(providedKey);
+}
+
+/**
+ * Middleware to authenticate regular user access
+ * Validates API key and loads user info
+ */
+export async function validateApiKey(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const apiKey = extractApiKey(req);
+
+    if (!apiKey) {
+      res.status(401).json({ error: 'API key required' });
+      return;
+    }
+
+    // Get catalogId from query or body
+    const catalogId = (req.query?.catalogId || req.body?.catalogId) as string | undefined;
+
+    if (!catalogId) {
+      res.status(400).json({ error: 'catalogId is required' });
+      return;
+    }
+    const elviraClient = new ElviraClient(apiKey, catalogId);
+    const user = await elviraClient.getCurrentUserInfo();
+
+    if (!user || !user.id) {
+      res.status(401).json({ error: 'Invalid API key or user not found' });
+      return;
+    }
+
+    req.elviraClient = elviraClient;
+    req.user = user;
+    req.apiKey = apiKey;
+    next();
+  } catch (err) {
+    console.error('API key validation error:', err);
+    res.status(401).json({ error: 'Invalid API key or unable to verify user' });
+  }
 }
