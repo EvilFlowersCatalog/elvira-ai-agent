@@ -65,9 +65,7 @@ export class OpenAIClient {
                 Don't use multiple filters at once, use title only, unless the user specifies otherwise.
                 Don't filter using summary or description unless explicitly requested.
 
-                Categories: 
-                    - Null, (Don't use this filter yet)
-
+                // TODO: Categories filtering not yet implemented. Update this section when category support is added.
                 When user asks for anything else, not related to the library entries, respond politely that you are here to help with library-related inquiries only.
                 Don't mention anything about AI or language models. Don't help with coding or technical questions.
                 You may respond with markdown formatting for better readability.                
