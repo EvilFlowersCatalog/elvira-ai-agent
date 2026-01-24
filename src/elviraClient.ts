@@ -31,8 +31,24 @@ export class ElviraClient {
   }
 
   /**
+   * Gets the current catalog ID
+   */
+  getCatalogId(): string {
+    return this.catalogId;
+  }
+
+  /**
+   * Sets or updates the catalog ID
+   * Useful when the catalog context changes during a session
+   */
+  setCatalogId(catalogId: string): void {
+    this.catalogId = catalogId;
+  }
+
+  /**
    * Get entries with pagination and filtering support
    * Supports filtering by: title, summary, category, author, language, date range, readium status, and custom query
+   * Note: catalogId is optional - if not provided, entries from all catalogs will be returned
    */
   async getEntries(
     page = 1,
@@ -54,12 +70,16 @@ export class ElviraClient {
       console.log(`ElviraClient.getEntries: Fetching entries from ${url}`);
       console.log('With filters:', filters);
       const params: Record<string, any> = {
-        catalog_id: this.catalogId,
         page,
         limit,
         pagination: true,
         ...filters,
       };
+
+      // Only include catalog_id if it's provided
+      if (this.catalogId) {
+        params.catalog_id = this.catalogId;
+      }
 
       const res = await axios.get(url, {
         headers: { 'Authorization': `Bearer ${this.apiKey}` },
@@ -75,10 +95,15 @@ export class ElviraClient {
 
   /**
    * Get detailed information about a specific entry
+   * REQUIRES catalogId to be set - throws error if not provided
    */
   async getEntryDetail(entryId: string) {
     if (!entryId) {
       throw new Error('Entry ID is required');
+    }
+
+    if (!this.catalogId) {
+      throw new Error('Catalog ID is required for fetching entry details');
     }
 
     const url = `${this.baseUrl}/api/v1/catalogs/${this.catalogId}/entries/${entryId}`;

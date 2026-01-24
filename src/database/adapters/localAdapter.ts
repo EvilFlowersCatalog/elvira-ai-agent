@@ -62,7 +62,7 @@ export class LocalDatabaseAdapter implements DatabaseAdapter {
     chatId: string,
     sender: 'user' | 'agent',
     text: string,
-    opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number }
+    opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }
   ): Promise<Message | null> {
     return localStore.logMessageLocal(chatId, sender, text, opts);
   }

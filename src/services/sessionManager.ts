@@ -36,13 +36,14 @@ export async function createSession(
         console.error(`Failed to log agent message for chat ${chatId}:`, err);
       });
     },
-    displayBooksListener: (bookIds: string[]) => {
-      console.log(`DisplayBooks@${chatId}:`, bookIds);
-      messagesQueues[chatId].push({ type: 'entries', data: bookIds });
+    displayBooksListener: (bookIds: string[], bookCatalogs?: Record<string, string>) => {
+      console.log(`DisplayBooks@${chatId}:`, bookIds, `bookCatalogs:`, bookCatalogs || 'none');
+      // Store bookCatalogs mapping for each book display
+      messagesQueues[chatId].push({ type: 'entries', data: bookIds, bookCatalogs });
       // Include book IDs in the message text so the agent can reference them in conversation
       const messageText = `[Displayed ${bookIds.length} book(s) with IDs: ${bookIds.join(', ')}]`;
-      // Log book display to database with bookIds in both text and metadata (fire and forget)
-      logMessage(chatId, 'agent', messageText, { userId, bookIds }).catch((err) => {
+      // Log book display to database with bookIds AND bookCatalogs mapping (fire and forget)
+      logMessage(chatId, 'agent', messageText, { userId, bookIds, bookCatalogs }).catch((err) => {
         console.error(`Failed to log book display for chat ${chatId}:`, err);
       });
     },
@@ -209,8 +210,9 @@ async function loadChatHistoryIntoSession(chatId: string, session: OpenAIClient)
         
         // If this message has bookIds, push them to the message queue to display them
         if (msg.bookIds && msg.bookIds.length > 0) {
-          console.log(`Restoring book display for message ${msg.id} with ${msg.bookIds.length} books`);
-          messagesQueues[chatId].push({ type: 'entries', data: msg.bookIds });
+          console.log(`Restoring book display for message ${msg.id} with ${msg.bookIds.length} books, bookCatalogs:`, msg.bookCatalogs || 'none');
+          // Restore bookCatalogs from the database so users can request details about these books
+          messagesQueues[chatId].push({ type: 'entries', data: msg.bookIds, bookCatalogs: msg.bookCatalogs });
         }
       }
     }

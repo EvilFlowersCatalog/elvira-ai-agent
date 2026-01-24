@@ -29,8 +29,9 @@ router.post('/startchat', async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    if (!catalogId) {
-      res.status(400).json({ error: 'Catalog ID required' });
+    // catalogId is required ONLY when starting with an entryId
+    if (entryId && !catalogId) {
+      res.status(400).json({ error: 'Catalog ID required when starting chat with entry ID' });
       return;
     }
 
@@ -186,8 +187,9 @@ router.post('/resumechat', async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    if (!catalogId) {
-      res.status(400).json({ error: 'Catalog ID required' });
+    // catalogId is required ONLY when resuming with an entryId
+    if (entryId && !catalogId) {
+      res.status(400).json({ error: 'Catalog ID required when resuming chat with entry ID' });
       return;
     }
 

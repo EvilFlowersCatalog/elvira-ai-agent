@@ -98,13 +98,8 @@ export async function validateApiKey(
       return;
     }
 
-    // Get catalogId from query or body
     const catalogId = (req.query?.catalogId || req.body?.catalogId) as string | undefined;
 
-    if (!catalogId) {
-      res.status(400).json({ error: 'catalogId is required' });
-      return;
-    }
     const elviraClient = new ElviraClient(apiKey, catalogId);
     const user = await elviraClient.getCurrentUserInfo();
 
