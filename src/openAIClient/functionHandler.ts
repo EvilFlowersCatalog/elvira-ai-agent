@@ -50,7 +50,6 @@ export async function handleFunctionCalls(client: OpenAIClient, functionCallStac
         try {
             switch (item.name) {
                 case "displayBooks":
-                    console.log("Handling displayBooks function call with options:", options);
                     result = await displayBooks(client, options);
                     break;
                 case "getEntries":

@@ -16,7 +16,7 @@ export function getTools(): Array<Tool> {
                     },
                     "catalogId": {
                         "type": "string",
-                        "description": "REQUIRED: Catalog ID where this entry belongs. Extract from the displayBooks call or conversation history where this book was shown."
+                        "description": "REQUIRED: Catalog UUID where this entry belongs. Extract from the displayBooks call or conversation history where this book was shown. Must be UUID format."
                     }
                 },
                 "required": [
@@ -114,7 +114,7 @@ export function getTools(): Array<Tool> {
                                 },
                                 "catalogId": {
                                     "type": "string",
-                                    "description": "Catalog ID where this book belongs (from entry.catalog_id)"
+                                    "description": "Catalog UUID where this book belongs (from entry.catalog_id field - must be UUID, not slug)"
                                 }
                             },
                             "required": ["id", "catalogId"],

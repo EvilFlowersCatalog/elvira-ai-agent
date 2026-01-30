@@ -101,9 +101,17 @@ router.post('/sendchat', async (req, res: Response) => {
     });
   }
 
-  // Validate API key matches the session
-  if (!validateSessionApiKey(chatSession.elviraClient, apiKey)) {
+  // Validate API key by checking user owns this chat
+  const elviraClient = new ElviraClient(apiKey);
+  let user;
+  try {
+    user = await elviraClient.getCurrentUserInfo();
+  } catch (err) {
     return res.status(401).json({ error: 'Invalid API key' });
+  }
+
+  if (!user || !user.id || user.id !== chatSession.userId) {
+    return res.status(401).json({ error: 'Invalid API key - chat does not belong to this user' });
   }
 
   // Set up Server-Sent Events

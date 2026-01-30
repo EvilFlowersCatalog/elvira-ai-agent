@@ -66,9 +66,8 @@ export class ElviraClient {
     }
   ) {
     const url = `${this.baseUrl}/api/v1/entries`;
+    
     try {
-      console.log(`ElviraClient.getEntries: Fetching entries from ${url}`);
-      console.log('With filters:', filters);
       const params: Record<string, any> = {
         page,
         limit,
@@ -76,7 +75,6 @@ export class ElviraClient {
         ...filters,
       };
 
-      // Only include catalog_id if it's provided
       if (this.catalogId) {
         params.catalog_id = this.catalogId;
       }
@@ -85,7 +83,7 @@ export class ElviraClient {
         headers: { 'Authorization': `Bearer ${this.apiKey}` },
         params,
       });
-      console.log(`ElviraClient.getEntries: Retrieved ${res.data?.items.length || 0} entries`);
+      
       return res.data;
     } catch (error) {
       this.handleApiError(error, 'getEntries');
@@ -107,14 +105,14 @@ export class ElviraClient {
     }
 
     const url = `${this.baseUrl}/api/v1/catalogs/${this.catalogId}/entries/${entryId}`;
+    
     try {
-      console.log(`ElviraClient.getEntryDetail: Fetching entry detail from ${url}`);
       const res = await axios.get(url, {
         headers: { 'Authorization': `Bearer ${this.apiKey}` }
       });
-      console.log(`ElviraClient.getEntryDetail: Retrieved entry: `, res.data?.response.title);
       return res.data;
     } catch (error) {
+      console.error(`[ElviraClient.getEntryDetail] Failed for catalogId: ${this.catalogId}, entryId: ${entryId}`);
       this.handleApiError(error, 'getEntryDetail');
       throw error;
     }
@@ -132,6 +130,7 @@ export class ElviraClient {
       });
 
       if (!res.data?.response || !res.data.response.id) {
+        console.log('invalid user api')
         throw new Error('Invalid user response from API');
       }
 

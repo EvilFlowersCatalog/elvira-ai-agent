@@ -37,12 +37,11 @@ export async function createSession(
       });
     },
     displayBooksListener: (bookIds: string[], bookCatalogs?: Record<string, string>) => {
-      console.log(`DisplayBooks@${chatId}:`, bookIds, `bookCatalogs:`, bookCatalogs || 'none');
-      // Store bookCatalogs mapping for each book display
       messagesQueues[chatId].push({ type: 'entries', data: bookIds, bookCatalogs });
-      // Include book IDs in the message text so the agent can reference them in conversation
-      const messageText = `[Displayed ${bookIds.length} book(s) with IDs: ${bookIds.join(', ')}]`;
-      // Log book display to database with bookIds AND bookCatalogs mapping (fire and forget)
+      
+      const catalogInfo = bookCatalogs ? JSON.stringify(bookCatalogs) : '{}';
+      const messageText = `[Displayed ${bookIds.length} book(s) with IDs: ${bookIds.join(', ')}] [Book Catalogs: ${catalogInfo}]`;
+      
       logMessage(chatId, 'agent', messageText, { userId, bookIds, bookCatalogs }).catch((err) => {
         console.error(`Failed to log book display for chat ${chatId}:`, err);
       });
@@ -174,23 +173,21 @@ async function loadChatHistoryIntoSession(chatId: string, session: OpenAIClient)
           ]
         });
       } else if (msg.sender === 'agent') {
-        // Add assistant messages using the message type from responses
-        // This matches the structure returned by the OpenAI API
-        // Generate a valid OpenAI message ID if msg_id is missing or invalid
         let messageId = msg.msg_id;
         if (!messageId || !messageId.startsWith('msg_')) {
-          // Generate a valid OpenAI-style message ID using the database ID
           messageId = `msg_${msg.id.replace(/-/g, '')}`;
         }
         
-        // Ensure book IDs are in the message text for agent reference
         let messageText = msg.text;
-        if (msg.bookIds && msg.bookIds.length > 0) {
-          // Check if book IDs are already in the text (for backward compatibility)
-          const hasBookIds = messageText.includes(msg.bookIds[0]) || messageText.includes('[Displayed');
-          if (!hasBookIds) {
-            // Append book IDs to the message text so agent can reference them
-            messageText = `${messageText}\n\n[Displayed ${msg.bookIds.length} book(s) with IDs: ${msg.bookIds.join(', ')}]`;
+        if (msg.bookIds && msg.bookIds.length > 0 && msg.bookCatalogs) {
+          const hasCatalogInfo = messageText.includes('[Book Catalogs:');
+          if (!hasCatalogInfo) {
+            const catalogInfo = JSON.stringify(msg.bookCatalogs);
+            if (messageText.includes('[Displayed')) {
+              messageText = `${messageText} [Book Catalogs: ${catalogInfo}]`;
+            } else {
+              messageText = `${messageText}\n\n[Displayed ${msg.bookIds.length} book(s) with IDs: ${msg.bookIds.join(', ')}] [Book Catalogs: ${catalogInfo}]`;
+            }
           }
         }
         
@@ -199,19 +196,14 @@ async function loadChatHistoryIntoSession(chatId: string, session: OpenAIClient)
           id: messageId,
           role: 'assistant',
           status: 'completed',
-          content: [
-            {
-              type: 'output_text',
-              text: messageText,
-              annotations: []
-            }
-          ]
+          content: [{
+            type: 'output_text',
+            text: messageText,
+            annotations: []
+          }]
         });
         
-        // If this message has bookIds, push them to the message queue to display them
         if (msg.bookIds && msg.bookIds.length > 0) {
-          console.log(`Restoring book display for message ${msg.id} with ${msg.bookIds.length} books, bookCatalogs:`, msg.bookCatalogs || 'none');
-          // Restore bookCatalogs from the database so users can request details about these books
           messagesQueues[chatId].push({ type: 'entries', data: msg.bookIds, bookCatalogs: msg.bookCatalogs });
         }
       }
