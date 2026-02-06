@@ -31,8 +31,24 @@ export class ElviraClient {
   }
 
   /**
+   * Gets the current catalog ID
+   */
+  getCatalogId(): string {
+    return this.catalogId;
+  }
+
+  /**
+   * Sets or updates the catalog ID
+   * Useful when the catalog context changes during a session
+   */
+  setCatalogId(catalogId: string): void {
+    this.catalogId = catalogId;
+  }
+
+  /**
    * Get entries with pagination and filtering support
    * Supports filtering by: title, summary, category, author, language, date range, readium status, and custom query
+   * Note: catalogId is optional - if not provided, entries from all catalogs will be returned
    */
   async getEntries(
     page = 1,
@@ -50,22 +66,24 @@ export class ElviraClient {
     }
   ) {
     const url = `${this.baseUrl}/api/v1/entries`;
+    
     try {
-      console.log(`ElviraClient.getEntries: Fetching entries from ${url}`);
-      console.log('With filters:', filters);
       const params: Record<string, any> = {
-        catalog_id: this.catalogId,
         page,
         limit,
         pagination: true,
         ...filters,
       };
 
+      if (this.catalogId) {
+        params.catalog_id = this.catalogId;
+      }
+
       const res = await axios.get(url, {
         headers: { 'Authorization': `Bearer ${this.apiKey}` },
         params,
       });
-      console.log(`ElviraClient.getEntries: Retrieved ${res.data?.items.length || 0} entries`);
+      
       return res.data;
     } catch (error) {
       this.handleApiError(error, 'getEntries');
@@ -75,21 +93,26 @@ export class ElviraClient {
 
   /**
    * Get detailed information about a specific entry
+   * REQUIRES catalogId to be set - throws error if not provided
    */
   async getEntryDetail(entryId: string) {
     if (!entryId) {
       throw new Error('Entry ID is required');
     }
 
+    if (!this.catalogId) {
+      throw new Error('Catalog ID is required for fetching entry details');
+    }
+
     const url = `${this.baseUrl}/api/v1/catalogs/${this.catalogId}/entries/${entryId}`;
+    
     try {
-      console.log(`ElviraClient.getEntryDetail: Fetching entry detail from ${url}`);
       const res = await axios.get(url, {
         headers: { 'Authorization': `Bearer ${this.apiKey}` }
       });
-      console.log(`ElviraClient.getEntryDetail: Retrieved entry: `, res.data?.response.title);
       return res.data;
     } catch (error) {
+      console.error(`[ElviraClient.getEntryDetail] Failed for catalogId: ${this.catalogId}, entryId: ${entryId}`);
       this.handleApiError(error, 'getEntryDetail');
       throw error;
     }
@@ -107,6 +130,7 @@ export class ElviraClient {
       });
 
       if (!res.data?.response || !res.data.response.id) {
+        console.log('invalid user api')
         throw new Error('Invalid user response from API');
       }
 

@@ -235,15 +235,15 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     chatId: string,
     sender: 'user' | 'agent',
     text: string,
-    opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number; bookIds?: string[] }
+    opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }
   ): Promise<Message | null> {
     if (!chatId) return null;
 
     try {
       const query = `
-        INSERT INTO messages (id, chat_id, user_id, sender, text, entry_id, msg_id, weight, tokens_used, book_ids, timestamp)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
-        RETURNING id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids;
+        INSERT INTO messages (id, chat_id, user_id, sender, text, entry_id, msg_id, weight, tokens_used, book_ids, book_catalogs, timestamp)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+        RETURNING id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids, book_catalogs;
       `;
 
       const result = await this.pool.query(query, [
@@ -257,6 +257,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
         opts?.weight || 1.0,
         opts?.tokensUsed || 0,
         opts?.bookIds ? JSON.stringify(opts.bookIds) : null,
+        opts?.bookCatalogs ? JSON.stringify(opts.bookCatalogs) : null,
       ]);
 
       return this.rowToMessage(result.rows[0]);
@@ -269,7 +270,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   async getChatHistory(chatId: string): Promise<Message[]> {
     try {
       const result = await this.pool.query(
-        'SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids FROM messages WHERE chat_id = $1 ORDER BY timestamp ASC',
+        'SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids, book_catalogs FROM messages WHERE chat_id = $1 ORDER BY timestamp ASC',
         [chatId]
       );
       return result.rows.map((row) => this.rowToMessage(row));
@@ -312,7 +313,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   async getUserMessagesInChat(chatId: string, userId: string): Promise<Message[]> {
     try {
       const result = await this.pool.query(
-        `SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids
+        `SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids, book_catalogs
          FROM messages WHERE chat_id = $1 AND sender = 'user' AND user_id = $2
          ORDER BY timestamp ASC`,
         [chatId, userId]
@@ -456,6 +457,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       msg_id: row.msg_id,
       userId: row.user_id,
       bookIds: row.book_ids ? (typeof row.book_ids === 'string' ? JSON.parse(row.book_ids) : row.book_ids) : undefined,
+      bookCatalogs: row.book_catalogs ? (typeof row.book_catalogs === 'string' ? JSON.parse(row.book_catalogs) : row.book_catalogs) : undefined,
     };
   }
 

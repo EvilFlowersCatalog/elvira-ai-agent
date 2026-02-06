@@ -29,8 +29,9 @@ router.post('/startchat', async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    if (!catalogId) {
-      res.status(400).json({ error: 'Catalog ID required' });
+    // catalogId is required ONLY when starting with an entryId
+    if (entryId && !catalogId) {
+      res.status(400).json({ error: 'Catalog ID required when starting chat with entry ID' });
       return;
     }
 
@@ -100,9 +101,17 @@ router.post('/sendchat', async (req, res: Response) => {
     });
   }
 
-  // Validate API key matches the session
-  if (!validateSessionApiKey(chatSession.elviraClient, apiKey)) {
+  // Validate API key by checking user owns this chat
+  const elviraClient = new ElviraClient(apiKey);
+  let user;
+  try {
+    user = await elviraClient.getCurrentUserInfo();
+  } catch (err) {
     return res.status(401).json({ error: 'Invalid API key' });
+  }
+
+  if (!user || !user.id || user.id !== chatSession.userId) {
+    return res.status(401).json({ error: 'Invalid API key - chat does not belong to this user' });
   }
 
   // Set up Server-Sent Events
@@ -186,8 +195,9 @@ router.post('/resumechat', async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    if (!catalogId) {
-      res.status(400).json({ error: 'Catalog ID required' });
+    // catalogId is required ONLY when resuming with an entryId
+    if (entryId && !catalogId) {
+      res.status(400).json({ error: 'Catalog ID required when resuming chat with entry ID' });
       return;
     }
 

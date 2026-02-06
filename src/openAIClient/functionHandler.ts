@@ -2,8 +2,24 @@ import { ResponseFunctionToolCall, ResponseInputItem } from "openai/resources/re
 import { OpenAIClient } from "./openaiClient";
 import { EntryFilterOptions } from "../types";
 
-async function displayBooks(client: OpenAIClient, options: { ids: string[] }) {
-    client.displayBooksListener(options.ids);
+async function displayBooks(client: OpenAIClient, options: { books: Array<{ id: string; catalogId: string }> }) {
+    // Validate books array and that each book has catalogId
+    if (!options.books || options.books.length === 0) {
+        throw new Error('books array is required for displayBooks.');
+    }
+    for (const book of options.books) {
+        if (!book.catalogId) {
+            throw new Error(`catalogId is required for book ${book.id}. Extract it from the entry's catalog_id field.`);
+        }
+    }
+    
+    const bookIds = options.books.map(b => b.id);
+    const bookCatalogs: Record<string, string> = {};
+    options.books.forEach(book => {
+        bookCatalogs[book.id] = book.catalogId;
+    });
+    
+    client.displayBooksListener(bookIds, bookCatalogs);
     return { success: true };
 }
 
@@ -34,7 +50,6 @@ export async function handleFunctionCalls(client: OpenAIClient, functionCallStac
         try {
             switch (item.name) {
                 case "displayBooks":
-                    console.log("Handling displayBooks function call with options:", options);
                     result = await displayBooks(client, options);
                     break;
                 case "getEntries":
@@ -42,7 +57,16 @@ export async function handleFunctionCalls(client: OpenAIClient, functionCallStac
                     result = await client.elviraClient.getEntries(options.page, options.limit, filters);
                     break;
                 case "getEntryDetails":
-                    result = await client.elviraClient.getEntryDetail(options.id);
+                    if (!options.catalogId) {
+                        throw new Error('catalogId is required for getEntryDetails. Extract it from the conversation history where this book was displayed.');
+                    }
+                    const originalCatalogId = client.elviraClient.getCatalogId();
+                    client.elviraClient.setCatalogId(options.catalogId);
+                    try {
+                        result = await client.elviraClient.getEntryDetail(options.id);
+                    } finally {
+                        client.elviraClient.setCatalogId(originalCatalogId);
+                    }
                     break;
                 default:
                     result = { success: false, error: "Unknown function call" };

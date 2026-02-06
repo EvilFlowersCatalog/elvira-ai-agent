@@ -1,7 +1,13 @@
 # User API Documentation
 
 ## Overview
-This document describes the new user-facing endpoints for managing chat sessions, listing recent chats, and resuming conversations.
+This document describes the user-facing endpoints for managing chat sessions, listing recent chats, and resuming conversations with the Elvira AI library assistant.
+
+## Important Update: Catalog ID Handling
+As of the latest version, **catalogId** handling has been updated:
+- **For browsing/searching entries**: catalogId is **OPTIONAL** - if not provided, searches across all available catalogs
+- **For fetching book details**: catalogId is **REQUIRED** - must be provided when starting a chat with a specific book or when displaying books
+- **User endpoints**: catalogId is **OPTIONAL** for authentication
 
 ## Authentication
 All endpoints require authentication via API key. The API key can be provided in one of the following ways:
@@ -9,6 +15,8 @@ All endpoints require authentication via API key. The API key can be provided in
 - **Custom header**: `x-api-key: <api_key>`
 - **Query parameter**: `?apiKey=<api_key>`
 - **Request body**: `{ "apiKey": "<api_key>" }`
+
+**Optional catalogId**: Can be provided via query parameter or request body for context, but is not required for authentication.
 
 ---
 
@@ -24,6 +32,9 @@ All endpoints require authentication via API key. The API key can be provided in
 ```
 Authorization: Bearer <api_key>
 ```
+
+**Query Parameters** (all optional):
+- `catalogId`: Catalog ID for context (not required)
 
 **Response**:
 ```json
@@ -66,6 +77,9 @@ Authorization: Bearer <api_key>
 **Parameters**:
 - `chatId` (path parameter): The unique identifier of the chat
 
+**Query Parameters** (all optional):
+- `catalogId`: Catalog ID for context (not required)
+
 **Response**:
 ```json
 {
@@ -102,7 +116,42 @@ Authorization: Bearer <api_key>
 
 ## Chat Management Endpoints
 
-### 3. Resume Existing Chat
+### 3. Start New Chat
+
+**Endpoint**: `POST /api/startchat`
+
+**Description**: Starts a new chat session. Can optionally start with a specific entry (book) in focus.
+
+**Request Body**:
+```json
+{
+  "apiKey": "your-api-key",
+  "catalogId": "catalog-id",  // REQUIRED only if entryId is provided
+  "entryId": "optional-entry-id"  // Optional: start chat focused on this book
+}
+```
+
+**Response**:
+```json
+{
+  "chatId": "new-chat-uuid"
+}
+```
+
+**Status Codes**:
+- `200 OK`: Chat created successfully
+- `400 Bad Request`: Missing catalogId when entryId is provided
+- `401 Unauthorized`: Invalid API key
+- `403 Forbidden`: User is blocked
+- `500 Internal Server Error`: Server error
+
+**Notes**:
+- **Without entryId**: Start a general chat - catalogId is OPTIONAL
+- **With entryId**: Start chat focused on a specific book - catalogId is REQUIRED to fetch book details
+
+---
+
+### 4. Resume Existing Chat
 
 **Endpoint**: `POST /api/resumechat`
 
@@ -113,7 +162,7 @@ Authorization: Bearer <api_key>
 {
   "chatId": "existing-chat-uuid",
   "apiKey": "your-api-key",
-  "catalogId": "catalog-id",
+  "catalogId": "catalog-id",  // REQUIRED only if entryId is provided
   "entryId": "optional-entry-id"
 }
 ```
@@ -129,7 +178,7 @@ Authorization: Bearer <api_key>
 
 **Status Codes**:
 - `200 OK`: Chat resumed successfully
-- `400 Bad Request`: Missing required fields (chatId, catalogId)
+- `400 Bad Request`: Missing chatId or missing catalogId when entryId is provided
 - `401 Unauthorized`: Invalid API key
 - `403 Forbidden`: User is blocked
 - `404 Not Found`: Chat not found or doesn't belong to user
@@ -138,56 +187,195 @@ Authorization: Bearer <api_key>
 **Notes**:
 - The chat session is restored with full conversation history
 - All previous messages are loaded into the AI context
-- If the session is already active in memory, it returns the existing session
+- If the session is already active in memory, returns the existing session
 - User ownership is verified before resuming
+- **catalogId is REQUIRED only if resuming with an entryId**
+
+---
+
+### 5. Send Chat Message
+
+**Endpoint**: `POST /api/sendchat`
+
+**Description**: Sends a message in an existing chat session. Returns a Server-Sent Events (SSE) stream for real-time responses.
+
+**Request Body**:
+```json
+{
+  "chatId": "existing-chat-uuid",
+  "apiKey": "your-api-key",
+  "message": "Your message here",
+  "entryId": "optional-entry-id"  // Optional: update focus to this book
+}
+```
+
+**Response**: Server-Sent Events stream
+
+**Event Types**:
+```json
+// Text chunk
+{ "type": "chunk", "data": "partial response text", "msg_id": "msg_123" }
+
+// Complete message
+{ "type": "message", "data": "complete response" }
+
+// Book display
+{ "type": "entries", "data": ["entry-id-1", "entry-id-2"], "catalogId": "catalog-id" }
+
+// Completion
+{ "type": "done" }
+
+// Error
+{ "type": "error", "data": "Error message" }
+```
+
+**Status Codes**:
+- `200 OK`: Stream started
+- `400 Bad Request`: Missing chatId or message
+- `401 Unauthorized`: Invalid API key
+- `403 Forbidden`: User is blocked
+- `404 Not Found`: Chat session not found
+- `429 Too Many Requests`: Daily message limit exceeded
 
 ---
 
 ## Usage Examples
 
-### Example 1: List All Chats
+### Example 1: Start a General Chat (No CatalogId Needed)
+```bash
+curl -X POST "http://localhost:6045/api/startchat" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "apiKey": "your-api-key"
+  }'
+```
+
+**Use Case**: User wants to browse and search across all available catalogs.
+
+---
+
+### Example 2: Start Chat with Specific Book
+```bash
+curl -X POST "http://localhost:6045/api/startchat" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "apiKey": "your-api-key",
+    "catalogId": "catalog-123",
+    "entryId": "book-456"
+  }'
+```
+
+**Use Case**: User clicks on a specific book and wants to chat about it. catalogId is REQUIRED here.
+
+---
+
+### Example 3: List All Chats
 ```bash
 curl -X GET "http://localhost:6045/user/chats" \
   -H "Authorization: Bearer your-api-key"
 ```
 
-### Example 2: Get Specific Chat History
+---
+
+### Example 4: Get Specific Chat History
 ```bash
 curl -X GET "http://localhost:6045/user/chats/abc-123-def-456" \
   -H "Authorization: Bearer your-api-key"
 ```
 
-### Example 3: Resume a Chat Session
+---
+
+### Example 5: Resume General Chat
 ```bash
 curl -X POST "http://localhost:6045/api/resumechat" \
   -H "Content-Type: application/json" \
   -d '{
     "chatId": "abc-123-def-456",
-    "apiKey": "your-api-key",
-    "catalogId": "your-catalog-id",
-    "entryId": null
+    "apiKey": "your-api-key"
   }'
 ```
 
-### Example 4: Continue Conversation After Resume
+**Use Case**: Continue a previous conversation. No catalogId needed.
+
+---
+
+### Example 6: Resume Chat with Book Context
 ```bash
-# First, resume the chat
 curl -X POST "http://localhost:6045/api/resumechat" \
   -H "Content-Type: application/json" \
   -d '{
     "chatId": "abc-123-def-456",
     "apiKey": "your-api-key",
-    "catalogId": "your-catalog-id"
+    "catalogId": "catalog-123",
+    "entryId": "book-456"
   }'
+```
 
-# Then, send a new message (using Server-Sent Events)
-curl -X POST "http://localhost:6045/api/sendchat" \
+**Use Case**: Resume chat and focus on a specific book. catalogId REQUIRED.
+
+---
+
+### Example 7: Send Message and Handle SSE Stream
+```bash
+curl -N -X POST "http://localhost:6045/api/sendchat" \
   -H "Content-Type: application/json" \
   -d '{
     "chatId": "abc-123-def-456",
     "apiKey": "your-api-key",
-    "message": "Can you tell me more about the first book?"
+    "message": "Can you recommend books about machine learning?"
   }'
+```
+
+**Note**: The `-N` flag disables buffering for streaming responses.
+
+---
+
+## Catalog ID Usage Patterns
+
+### Pattern 1: Browse Mode (No Catalog Context)
+```javascript
+// Start chat without catalogId
+const startResponse = await fetch('/api/startchat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ apiKey: 'your-key' })
+});
+
+const { chatId } = await startResponse.json();
+
+// User can search across all catalogs
+// AI will display books with their catalogIds
+// Details can be fetched later when AI knows the catalogId from search results
+```
+
+### Pattern 2: Book Detail Mode (Catalog Context Required)
+```javascript
+// User clicks on a book from catalog X
+const startResponse = await fetch('/api/startchat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    apiKey: 'your-key',
+    catalogId: 'catalog-X',
+    entryId: 'book-123'
+  })
+});
+
+// Now AI can fetch details for this book and related books from same catalog
+```
+
+### Pattern 3: Hybrid Mode (Search Then Details)
+```javascript
+// Start without catalog
+const { chatId } = await startChat(apiKey);
+
+// Search returns books with catalogIds
+await sendMessage(chatId, "Find books about AI");
+// Response includes: { type: 'entries', data: ['book1', 'book2'], catalogId: 'catalog-X' }
+
+// AI now knows catalogId from search results
+// User can request details: "Tell me more about the first book"
+// AI uses the catalogId it received from the search results
 ```
 
 ---
@@ -211,6 +399,10 @@ curl -X POST "http://localhost:6045/api/sendchat" \
 2. **Resume Before Sending**: Always call `/api/resumechat` before `/api/sendchat` for existing chats
 3. **Handle Errors**: Implement proper error handling for 404 (chat not found) and 403 (blocked user)
 4. **Monitor Limits**: Check daily message limits when resuming active conversations
+5. **Catalog Context**: 
+   - Start WITHOUT catalogId for general browsing
+   - Start WITH catalogId when focusing on a specific book
+   - Let the AI discover catalogIds through search results
 
 ---
 
@@ -224,7 +416,16 @@ All endpoints return errors in the following format:
 }
 ```
 
-For quota exceeded errors (429):
+### Common Errors
+
+**Missing Catalog ID for Details**:
+```json
+{
+  "error": "Catalog ID is required to fetch entry details. Please ensure the chat was started with a catalogId or that entries were fetched with a specific catalogId."
+}
+```
+
+**Quota Exceeded (429)**:
 ```json
 {
   "error": "Daily message limit exceeded",
@@ -233,3 +434,59 @@ For quota exceeded errors (429):
   "resetAt": "2025-12-12T00:00:00.000Z"
 }
 ```
+
+**Invalid Catalog Context (400)**:
+```json
+{
+  "error": "Catalog ID required when starting chat with entry ID"
+}
+```
+
+---
+
+## Migration Notes
+
+### From Previous Version
+
+**Before**: catalogId was always required
+```json
+{
+  "apiKey": "key",
+  "catalogId": "catalog-123"  // Always required
+}
+```
+
+**Now**: catalogId is optional for browsing, required for details
+```json
+// Browsing mode
+{
+  "apiKey": "key"
+  // catalogId optional
+}
+
+// Detail mode
+{
+  "apiKey": "key",
+  "catalogId": "catalog-123",  // Required when entryId provided
+  "entryId": "book-456"
+}
+```
+
+**Impact**:
+- Existing code with catalogId will continue to work
+- New code can omit catalogId for general browsing
+- Entry details require catalogId to be known (from session start or search results)
+
+---
+
+## AI Behavior Changes
+
+The AI assistant now handles two modes:
+
+1. **Catalog-Agnostic Mode**: Searches across all catalogs, displays books with their catalogIds
+2. **Catalog-Specific Mode**: Works within a specific catalog context, can fetch details
+
+The AI automatically manages catalogId context based on:
+- How the chat was started (with or without catalogId)
+- Search results that include catalogIds
+- User requests for specific book details

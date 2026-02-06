@@ -5,7 +5,7 @@ export function getTools(): Array<Tool> {
         {
             "type": "function",
             "name": "getEntryDetails",
-            "description": "Elvira - Retrieve entry details using the provided ID",
+            "description": "Elvira - Retrieve entry details using the provided ID and catalogId",
             "strict": true,
             "parameters": {
                 "type": "object",
@@ -13,10 +13,15 @@ export function getTools(): Array<Tool> {
                     "id": {
                         "type": "string",
                         "description": "Unique identifier of the entry to retrieve details for"
+                    },
+                    "catalogId": {
+                        "type": "string",
+                        "description": "REQUIRED: Catalog UUID where this entry belongs. Extract from the displayBooks call or conversation history where this book was shown. Must be UUID format."
                     }
                 },
                 "required": [
-                    "id"
+                    "id",
+                    "catalogId"
                 ],
                 "additionalProperties": false
             }
@@ -93,22 +98,33 @@ export function getTools(): Array<Tool> {
         {
             "type": "function",
             "name": "displayBooks",
-            "description": "Display books in the UI given an array of book IDs",
+            "description": "Display books in the UI. Each book must include its catalogId from the entry's catalog_id field.",
             "strict": true,
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "ids": {
+                    "books": {
                         "type": "array",
                         "items": {
-                            "type": "string",
-                            "description": "Unique identifier of a book"
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "description": "Unique identifier of the book"
+                                },
+                                "catalogId": {
+                                    "type": "string",
+                                    "description": "Catalog UUID where this book belongs (from entry.catalog_id field - must be UUID, not slug)"
+                                }
+                            },
+                            "required": ["id", "catalogId"],
+                            "additionalProperties": false
                         },
-                        "description": "Array of book IDs to display"
+                        "description": "Array of books with their catalog IDs"
                     }
                 },
                 "required": [
-                    "ids"
+                    "books"
                 ],
                 "additionalProperties": false
             }

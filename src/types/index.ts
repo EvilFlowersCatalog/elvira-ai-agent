@@ -18,12 +18,13 @@ export interface MessageQueueItem {
   type: 'message' | 'entries' | 'chunk' | 'error' | 'done';
   data: string | string[];
   msg_id?: string;
+  bookCatalogs?: Record<string, string>; // Map of bookId -> catalogId
 }
 
 // Chat session listeners
 export interface ChatSessionListeners {
   messageListener: (message: string, msg_id?: string) => void;
-  displayBooksListener: (bookIds: string[]) => void;
+  displayBooksListener: (bookIds: string[], bookCatalogs?: Record<string, string>) => void;
   chunkListener: (msg_id: string, chunk: string) => void;
 }
 

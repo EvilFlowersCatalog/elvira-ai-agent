@@ -29,6 +29,7 @@ export type Message = {
   msg_id?: string;
   userId?: string;
   bookIds?: string[]; // Store book IDs from displayBooks function
+  bookCatalogs?: Record<string, string>; // Map of bookId -> catalogId for each displayed book
 };
 
 // ============================================================
@@ -129,7 +130,7 @@ export async function logMessage(
   chatId: string,
   sender: 'user' | 'agent',
   text: string,
-  opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number; bookIds?: string[] }
+  opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }
 ): Promise<Message | null> {
   const db = getDatabaseAdapter();
   return db.logMessage(chatId, sender, text, opts);

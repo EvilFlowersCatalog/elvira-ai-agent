@@ -210,7 +210,7 @@ export function logMessageLocal(
   chatId: string,
   sender: 'user' | 'agent',
   text: string,
-  opts?: { entryId?: string; msg_id?: string; userId?: string; bookIds?: string[] }
+  opts?: { entryId?: string; msg_id?: string; userId?: string; bookIds?: string[]; bookCatalogs?: Record<string, string> }
 ): Message | null {
   if (!chatId) return null;
 
@@ -224,6 +224,7 @@ export function logMessageLocal(
     msg_id: opts?.msg_id,
     userId: opts?.userId,
     bookIds: opts?.bookIds,
+    bookCatalogs: opts?.bookCatalogs,
   };
 
   chats[chatId] = chats[chatId] || [];
