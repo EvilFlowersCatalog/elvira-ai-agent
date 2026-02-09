@@ -6,7 +6,8 @@ import {
   getUsersPaginated,
   getChatsByUser,
   getUserMessagesInChat,
-  setUserBlocked
+  setUserBlocked,
+  getDailyLimits
 } from '../accounts';
 
 const router = Router();
@@ -25,6 +26,23 @@ router.get('/users', adminAuth, async (req: AdminRequest, res: Response) => {
   } catch (err) {
     console.error('Error fetching users:', err);
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+/**
+ * GET /admin/daily-limits
+ * List daily limits with filtering
+ */
+router.get('/daily-limits', adminAuth, async (req: AdminRequest, res: Response) => {
+  const userId = req.query.userId as string;
+  const date = req.query.date as string;
+
+  try {
+    const limits = await getDailyLimits(userId, date);
+    res.json({ limits });
+  } catch (err) {
+    console.error('Error fetching daily limits:', err);
+    res.status(500).json({ error: 'Failed to fetch daily limits' });
   }
 });
 

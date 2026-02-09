@@ -101,6 +101,21 @@ export class LocalDatabaseAdapter implements DatabaseAdapter {
     return this.dailyLimits[key] || null;
   }
 
+  async listDailyLimits(userId?: string, date?: string): Promise<DailyLimit[]> {
+    let limits = Object.values(this.dailyLimits);
+
+    if (userId) {
+      limits = limits.filter(l => l.user_id === userId);
+    }
+
+    if (date) {
+      limits = limits.filter(l => l.date === date);
+    }
+
+    // Sort by date desc
+    return limits.sort((a, b) => b.date.localeCompare(a.date));
+  }
+
   async createDailyLimit(userId: string, date: string, messagesLimit: number, tokensLimit: number): Promise<DailyLimit> {
     const key = `${userId}:${date}`;
     const limit: DailyLimit = {

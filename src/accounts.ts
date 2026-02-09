@@ -1,4 +1,5 @@
 import { getDatabaseAdapter } from './database';
+import { DailyLimit } from './database/adapter';
 
 // ============================================================
 // Types
@@ -105,6 +106,14 @@ export async function getUsersPaginated(page = 1, limit = 25): Promise<{
 }> {
   const db = getDatabaseAdapter();
   return db.getUsersPaginated(page, limit);
+}
+
+/**
+ * Get daily limits with optional filtering
+ */
+export async function getDailyLimits(userId?: string, date?: string): Promise<DailyLimit[]> {
+  const db = getDatabaseAdapter();
+  return db.listDailyLimits(userId, date);
 }
 
 // ============================================================

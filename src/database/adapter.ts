@@ -43,6 +43,7 @@ export interface DatabaseAdapter {
 
   // Daily limit operations
   getDailyLimit(userId: string, date: string): Promise<DailyLimit | null>;
+  listDailyLimits(userId?: string, date?: string): Promise<DailyLimit[]>;
   createDailyLimit(userId: string, date: string, messagesLimit: number, tokensLimit: number): Promise<DailyLimit>;
   updateDailyLimitUsage(dailyLimitId: string, messagesUsed: number, tokensUsed: number): Promise<DailyLimit | null>;
   incrementDailyLimitUsage(dailyLimitId: string, messages: number, tokens: number): Promise<DailyLimit | null>;

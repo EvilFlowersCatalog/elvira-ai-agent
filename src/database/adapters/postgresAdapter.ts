@@ -362,6 +362,31 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  async listDailyLimits(userId?: string, date?: string): Promise<DailyLimit[]> {
+    try {
+      let query = 'SELECT * FROM daily_limits WHERE 1=1';
+      const params: any[] = [];
+
+      if (userId) {
+        params.push(userId);
+        query += ` AND user_id = $${params.length}`;
+      }
+
+      if (date) {
+        params.push(date);
+        query += ` AND date = $${params.length}`;
+      }
+
+      query += ' ORDER BY date DESC, created_at DESC';
+
+      const result = await this.pool.query(query, params);
+      return result.rows.map(row => this.rowToDailyLimit(row));
+    } catch (error) {
+      console.error('Error listing daily limits:', error);
+      return [];
+    }
+  }
+
   async createDailyLimit(userId: string, date: string, messagesLimit: number, tokensLimit: number): Promise<DailyLimit> {
     try {
       const query = `
