@@ -256,8 +256,8 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
         opts?.msg_id || null,
         opts?.weight || 1.0,
         opts?.tokensUsed || 0,
-        opts?.bookIds ? JSON.stringify(opts.bookIds) : null,
-        opts?.bookCatalogs ? JSON.stringify(opts.bookCatalogs) : null,
+        opts?.bookIds || null,
+        opts?.bookCatalogs || null,
       ]);
 
       return this.rowToMessage(result.rows[0]);
@@ -456,8 +456,8 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       entryId: row.entry_id,
       msg_id: row.msg_id,
       userId: row.user_id,
-      bookIds: row.book_ids ? (typeof row.book_ids === 'string' ? JSON.parse(row.book_ids) : row.book_ids) : undefined,
-      bookCatalogs: row.book_catalogs ? (typeof row.book_catalogs === 'string' ? JSON.parse(row.book_catalogs) : row.book_catalogs) : undefined,
+      bookIds: row.book_ids || undefined,
+      bookCatalogs: row.book_catalogs || undefined,
     };
   }
 
