@@ -130,7 +130,7 @@ export async function logMessage(
   chatId: string,
   sender: 'user' | 'agent',
   text: string,
-  opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }
+  opts?: { entryId?: string; msg_id?: string; userId?: string; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }
 ): Promise<Message | null> {
   const db = getDatabaseAdapter();
   return db.logMessage(chatId, sender, text, opts);

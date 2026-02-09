@@ -235,14 +235,14 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     chatId: string,
     sender: 'user' | 'agent',
     text: string,
-    opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }
+    opts?: { entryId?: string; msg_id?: string; userId?: string; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }
   ): Promise<Message | null> {
     if (!chatId) return null;
 
     try {
       const query = `
-        INSERT INTO messages (id, chat_id, user_id, sender, text, entry_id, msg_id, weight, tokens_used, book_ids, book_catalogs, timestamp)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, CURRENT_TIMESTAMP)
+        INSERT INTO messages (id, chat_id, user_id, sender, text, entry_id, msg_id, tokens_used, book_ids, book_catalogs, timestamp)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, CURRENT_TIMESTAMP)
         RETURNING id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids, book_catalogs;
       `;
 
@@ -254,7 +254,6 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
         text,
         opts?.entryId || null,
         opts?.msg_id || null,
-        opts?.weight || 1.0,
         opts?.tokensUsed || 0,
         opts?.bookIds ? JSON.stringify(opts.bookIds) : null,
         opts?.bookCatalogs ? JSON.stringify(opts.bookCatalogs) : null,

@@ -32,7 +32,7 @@ export interface DatabaseAdapter {
 
   // Message/Chat operations
   createChat(chatId: string, userId: string, title?: string): Promise<{ chatId: string; userId: string; startedAt: string } | null>;
-  logMessage(chatId: string, sender: 'user' | 'agent', text: string, opts?: { entryId?: string; msg_id?: string; userId?: string; weight?: number; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }): Promise<Message | null>;
+  logMessage(chatId: string, sender: 'user' | 'agent', text: string, opts?: { entryId?: string; msg_id?: string; userId?: string; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }): Promise<Message | null>;
   getChatHistory(chatId: string): Promise<Message[]>;
   clearChatHistory(chatId: string): Promise<void>;
   getChatsByUser(userId: string): Promise<{ chatId: string; startedAt?: string }[]>;
