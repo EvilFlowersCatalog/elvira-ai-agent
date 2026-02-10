@@ -4,7 +4,7 @@
  */
 import { v4 as uuidv4 } from 'uuid';
 import { User, Message } from '../../accounts';
-import { DatabaseAdapter, DailyLimit } from '../adapter';
+import { DatabaseAdapter, DailyLimit, UserStats, ChatWithStats } from '../adapter';
 import * as localStore from '../localStore';
 
 export class LocalDatabaseAdapter implements DatabaseAdapter {
@@ -49,6 +49,19 @@ export class LocalDatabaseAdapter implements DatabaseAdapter {
     return localStore.getUsersPaginatedLocal(page, limit);
   }
 
+  async getUserStats(userId: string): Promise<UserStats | null> {
+    return localStore.getUserStatsLocal(userId);
+  }
+
+  async getUsersWithStats(page = 1, limit = 25): Promise<{
+    users: (User & UserStats)[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    return localStore.getUsersWithStatsLocal(page, limit);
+  }
+
   // Message/Chat operations (delegated to local store)
   async createChat(
     chatId: string,
@@ -67,6 +80,10 @@ export class LocalDatabaseAdapter implements DatabaseAdapter {
     return localStore.logMessageLocal(chatId, sender, text, opts);
   }
 
+  async updateMessageTokens(messageId: string, tokensUsed: number): Promise<Message | null> {
+    return localStore.updateMessageTokensLocal(messageId, tokensUsed);
+  }
+
   async getChatHistory(chatId: string): Promise<Message[]> {
     return localStore.getChatHistoryLocal(chatId);
   }
@@ -77,6 +94,10 @@ export class LocalDatabaseAdapter implements DatabaseAdapter {
 
   async getChatsByUser(userId: string): Promise<{ chatId: string; startedAt?: string }[]> {
     return localStore.getChatsByUserLocal(userId);
+  }
+
+  async getChatsWithStatsByUser(userId: string): Promise<ChatWithStats[]> {
+    return localStore.getChatsWithStatsByUserLocal(userId);
   }
 
   async getUserMessagesInChat(chatId: string, userId: string): Promise<Message[]> {

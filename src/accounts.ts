@@ -29,6 +29,7 @@ export type Message = {
   entryId?: string;
   msg_id?: string;
   userId?: string;
+  tokensUsed?: number;
   bookIds?: string[]; // Store book IDs from displayBooks function
   bookCatalogs?: Record<string, string>; // Map of bookId -> catalogId for each displayed book
 };
@@ -146,6 +147,14 @@ export async function logMessage(
 }
 
 /**
+ * Update message with actual tokens used
+ */
+export async function updateMessageTokens(messageId: string, tokensUsed: number): Promise<Message | null> {
+  const db = getDatabaseAdapter();
+  return db.updateMessageTokens(messageId, tokensUsed);
+}
+
+/**
  * Get all messages in a chat
  */
 export async function getChatHistory(chatId: string): Promise<Message[]> {
@@ -167,6 +176,30 @@ export async function clearChatHistory(chatId: string): Promise<void> {
 export async function getChatsByUser(userId: string): Promise<{ chatId: string; startedAt?: string }[]> {
   const db = getDatabaseAdapter();
   return db.getChatsByUser(userId);
+}
+
+/**
+ * Get all chats with statistics for a specific user
+ */
+export async function getChatsWithStatsByUser(userId: string): Promise<any[]> {
+  const db = getDatabaseAdapter();
+  return db.getChatsWithStatsByUser(userId);
+}
+
+/**
+ * Get user statistics
+ */
+export async function getUserStats(userId: string): Promise<any> {
+  const db = getDatabaseAdapter();
+  return db.getUserStats(userId);
+}
+
+/**
+ * Get users with statistics and pagination
+ */
+export async function getUsersWithStats(page = 1, limit = 25): Promise<any> {
+  const db = getDatabaseAdapter();
+  return db.getUsersWithStats(page, limit);
 }
 
 /**

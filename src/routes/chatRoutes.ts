@@ -127,7 +127,7 @@ router.post('/sendchat', async (req, res: Response) => {
   }
 
   console.log(`User@${chatId}:`, message);
-  await logMessage(chatId, 'user', message, { userId: chatSession.userId });
+  const userMessage = await logMessage(chatId, 'user', message, { userId: chatSession.userId });
 
   try {
     let finished = false;
@@ -143,6 +143,13 @@ router.post('/sendchat', async (req, res: Response) => {
         finished = true;
         // Record usage after successful processing
         const tokensUsed = chatSession.getLastTokensUsed();
+        
+        // Update the user message with the actual tokens used
+        if (userMessage && tokensUsed > 0) {
+          const { updateMessageTokens } = await import('../accounts');
+          await updateMessageTokens(userMessage.id, tokensUsed);
+        }
+        
         const usageRecorded = await recordMessageUsage(chatSession.userId, message, tokensUsed);
         if (!usageRecorded) {
           console.warn(`Failed to record usage for user ${chatSession.userId}`);

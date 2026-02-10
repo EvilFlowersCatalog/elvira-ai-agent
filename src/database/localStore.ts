@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';
 import { User, Message } from '../accounts';
+import { UserStats, ChatWithStats } from './adapter';
 
 // ============================================================
 // Persistence Configuration
@@ -16,6 +17,7 @@ const STORAGE_DIR = path.join(process.platform === 'win32' ? (process.env.TEMP |
 const USERS_FILE = path.join(STORAGE_DIR, 'users.json');
 const CHATS_FILE = path.join(STORAGE_DIR, 'chats.json');
 const CHATS_METADATA_FILE = path.join(STORAGE_DIR, 'chats_metadata.json');
+console.log(`Local storage directory: ${STORAGE_DIR}`);
 
 // Ensure storage directory exists
 if (!fs.existsSync(STORAGE_DIR)) {
@@ -28,7 +30,14 @@ if (!fs.existsSync(STORAGE_DIR)) {
 
 let users: Record<string, User> = {};
 let chats: Record<string, Message[]> = {};
-let chatsMetadata: Record<string, { chatId: string; userId: string; startedAt: string; title?: string }> = {};
+let chatsMetadata: Record<string, { 
+  chatId: string; 
+  userId: string; 
+  startedAt: string; 
+  title?: string;
+  messageCount: number;
+  totalTokens: number;
+}> = {};
 
 // ============================================================
 // Persistence Functions
@@ -195,6 +204,8 @@ export function createChatLocal(
     userId,
     startedAt: new Date().toISOString(),
     title,
+    messageCount: 0,
+    totalTokens: 0,
   };
 
   chatsMetadata[chatId] = chatMeta;
@@ -210,7 +221,7 @@ export function logMessageLocal(
   chatId: string,
   sender: 'user' | 'agent',
   text: string,
-  opts?: { entryId?: string; msg_id?: string; userId?: string; bookIds?: string[]; bookCatalogs?: Record<string, string> }
+  opts?: { entryId?: string; msg_id?: string; userId?: string; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }
 ): Message | null {
   if (!chatId) return null;
 
@@ -223,12 +234,26 @@ export function logMessageLocal(
     entryId: opts?.entryId,
     msg_id: opts?.msg_id,
     userId: opts?.userId,
+    tokensUsed: opts?.tokensUsed || 0,
     bookIds: opts?.bookIds,
     bookCatalogs: opts?.bookCatalogs,
   };
 
   chats[chatId] = chats[chatId] || [];
   chats[chatId].push(msg);
+
+  // Update chat metadata with stats
+  if (chatsMetadata[chatId]) {
+    chatsMetadata[chatId].messageCount = (chatsMetadata[chatId].messageCount || 0) + 1;
+    chatsMetadata[chatId].totalTokens = (chatsMetadata[chatId].totalTokens || 0) + (opts?.tokensUsed || 0);
+    
+    // Auto-generate title from first user message if not set
+    if (!chatsMetadata[chatId].title && sender === 'user' && chatsMetadata[chatId].messageCount === 1) {
+      chatsMetadata[chatId].title = text.substring(0, 100);
+    }
+    
+    saveChatsMetadata();
+  }
 
   saveChats();
   return msg;
@@ -274,4 +299,98 @@ export function getAllChatIdsLocal(): string[] {
 
 export function getChatCountLocal(): number {
   return Object.keys(chats).length;
+}
+
+export function getUserStatsLocal(userId: string): UserStats | null {
+  const userChats = Object.values(chatsMetadata).filter(chat => chat.userId === userId);
+  
+  if (!users[userId]) {
+    return null;
+  }
+
+  let messageCount = 0;
+  let totalTokens = 0;
+  let lastActivity: string | undefined = undefined;
+
+  for (const chatMeta of userChats) {
+    messageCount += chatMeta.messageCount || 0;
+    totalTokens += chatMeta.totalTokens || 0;
+
+    const chatMessages = chats[chatMeta.chatId] || [];
+    for (const msg of chatMessages) {
+      if (!lastActivity || msg.timestamp > lastActivity) {
+        lastActivity = msg.timestamp;
+      }
+    }
+  }
+
+  return {
+    userId,
+    chatCount: userChats.length,
+    messageCount,
+    totalTokens,
+    lastActivity,
+  };
+}
+
+export function getUsersWithStatsLocal(page = 1, limit = 25): {
+  users: (User & UserStats)[];
+  total: number;
+  page: number;
+  limit: number;
+} {
+  const all = Object.values(users);
+  const total = all.length;
+  const start = (page - 1) * limit;
+  const slice = all.slice(start, start + limit);
+
+  const usersWithStats = slice.map(user => {
+    const stats = getUserStatsLocal(user.id) || {
+      userId: user.id,
+      chatCount: 0,
+      messageCount: 0,
+      totalTokens: 0,
+      lastActivity: undefined,
+    };
+
+    return {
+      ...user,
+      ...stats,
+    };
+  });
+
+  return { users: usersWithStats, total, page, limit };
+}
+
+export function getChatsWithStatsByUserLocal(userId: string): ChatWithStats[] {
+  const userChats = Object.values(chatsMetadata).filter(chat => chat.userId === userId);
+
+  return userChats.map(chatMeta => ({
+    chatId: chatMeta.chatId,
+    userId: chatMeta.userId,
+    title: chatMeta.title,
+    startedAt: chatMeta.startedAt,
+    messageCount: chatMeta.messageCount || 0,
+    totalTokens: chatMeta.totalTokens || 0,
+  }));
+}
+
+export function updateMessageTokensLocal(messageId: string, tokensUsed: number): Message | null {
+  for (const [chatId, messages] of Object.entries(chats)) {
+    const msg = messages.find(m => m.id === messageId);
+    if (msg) {
+      // Update the chat metadata with the token difference
+      if (chatsMetadata[chatId]) {
+        const oldTokens = (msg as any).tokensUsed || 0;
+        chatsMetadata[chatId].totalTokens = (chatsMetadata[chatId].totalTokens || 0) - oldTokens + tokensUsed;
+        saveChatsMetadata();
+      }
+      
+      // Update the message
+      (msg as any).tokensUsed = tokensUsed;
+      saveChats();
+      return msg;
+    }
+  }
+  return null;
 }

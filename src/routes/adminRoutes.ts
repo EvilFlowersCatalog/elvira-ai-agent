@@ -3,8 +3,8 @@ import { AdminRequest } from '../types';
 import { adminAuth } from '../middleware/auth';
 import { terminateUserSessions } from '../services/sessionManager';
 import {
-  getUsersPaginated,
-  getChatsByUser,
+  getUsersWithStats,
+  getChatsWithStatsByUser,
   getUserMessagesInChat,
   setUserBlocked,
   getDailyLimits
@@ -14,14 +14,14 @@ const router = Router();
 
 /**
  * GET /admin/users
- * List users with pagination
+ * List users with pagination and statistics
  */
 router.get('/users', adminAuth, async (req: AdminRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 25;
 
   try {
-    const data = await getUsersPaginated(page, limit);
+    const data = await getUsersWithStats(page, limit);
     res.json(data);
   } catch (err) {
     console.error('Error fetching users:', err);
@@ -48,13 +48,13 @@ router.get('/daily-limits', adminAuth, async (req: AdminRequest, res: Response) 
 
 /**
  * GET /admin/users/:userId/chats
- * List chats started by a user
+ * List chats started by a user with statistics
  */
 router.get('/users/:userId/chats', adminAuth, async (req: AdminRequest, res: Response) => {
   const { userId } = req.params;
 
   try {
-    const chats = await getChatsByUser(userId);
+    const chats = await getChatsWithStatsByUser(userId);
     res.json({ chats });
   } catch (err) {
     console.error('Error listing user chats:', err);

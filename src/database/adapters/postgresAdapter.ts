@@ -4,7 +4,7 @@
  */
 import { Pool, QueryResult } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
-import { DatabaseAdapter, DailyLimit } from '../adapter';
+import { DatabaseAdapter, DailyLimit, UserStats, ChatWithStats } from '../adapter';
 import { runMigrations } from '../migrations';
 import { DatabaseConfig } from '../config';
 import { Message, User } from '../../accounts';
@@ -186,6 +186,95 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  async getUserStats(userId: string): Promise<UserStats | null> {
+    try {
+      const query = `
+        SELECT 
+          u.id as user_id,
+          COUNT(DISTINCT c.id) as chat_count,
+          COALESCE(SUM(c.message_count), 0) as message_count,
+          COALESCE(SUM(c.total_tokens), 0) as total_tokens,
+          MAX(m.timestamp) as last_activity
+        FROM users u
+        LEFT JOIN chats c ON u.id = c.user_id
+        LEFT JOIN messages m ON u.id = m.user_id
+        WHERE u.id = $1
+        GROUP BY u.id
+      `;
+
+      const result = await this.pool.query(query, [userId]);
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row = result.rows[0];
+      return {
+        userId: row.user_id,
+        chatCount: parseInt(row.chat_count, 10),
+        messageCount: parseInt(row.message_count, 10),
+        totalTokens: parseInt(row.total_tokens, 10),
+        lastActivity: row.last_activity?.toISOString?.() || row.last_activity,
+      };
+    } catch (error) {
+      console.error('Error getting user stats:', error);
+      return null;
+    }
+  }
+
+  async getUsersWithStats(page = 1, limit = 25): Promise<{
+    users: (User & UserStats)[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    try {
+      const offset = (page - 1) * limit;
+
+      const countResult = await this.pool.query('SELECT COUNT(*) FROM users');
+      const total = parseInt(countResult.rows[0].count, 10);
+
+      const query = `
+        SELECT 
+          u.*,
+          COUNT(DISTINCT c.id) as chat_count,
+          COALESCE(SUM(c.message_count), 0) as message_count,
+          COALESCE(SUM(c.total_tokens), 0) as total_tokens,
+          MAX(m.timestamp) as last_activity
+        FROM users u
+        LEFT JOIN chats c ON u.id = c.user_id
+        LEFT JOIN messages m ON u.id = m.user_id
+        GROUP BY u.id
+        ORDER BY u.created_at DESC
+        LIMIT $1 OFFSET $2
+      `;
+
+      const result = await this.pool.query(query, [limit, offset]);
+
+      const users = result.rows.map((row) => {
+        const user = this.rowToUser(row);
+        return {
+          ...user,
+          userId: user.id,
+          chatCount: parseInt(row.chat_count, 10),
+          messageCount: parseInt(row.message_count, 10),
+          totalTokens: parseInt(row.total_tokens, 10),
+          lastActivity: row.last_activity?.toISOString?.() || row.last_activity,
+        };
+      });
+
+      return {
+        users,
+        total,
+        page,
+        limit,
+      };
+    } catch (error) {
+      console.error('Error getting users with stats:', error);
+      return { users: [], total: 0, page, limit };
+    }
+  }
+
   // Message/Chat operations
   async createChat(
     chatId: string,
@@ -243,7 +332,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       const query = `
         INSERT INTO messages (id, chat_id, user_id, sender, text, entry_id, msg_id, tokens_used, book_ids, book_catalogs, timestamp)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, CURRENT_TIMESTAMP)
-        RETURNING id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids, book_catalogs;
+        RETURNING id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, tokens_used, book_ids, book_catalogs;
       `;
 
       const result = await this.pool.query(query, [
@@ -266,10 +355,27 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  async updateMessageTokens(messageId: string, tokensUsed: number): Promise<Message | null> {
+    try {
+      const query = `
+        UPDATE messages
+        SET tokens_used = $2
+        WHERE id = $1
+        RETURNING id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids, book_catalogs, tokens_used;
+      `;
+
+      const result = await this.pool.query(query, [messageId, tokensUsed]);
+      return result.rows.length > 0 ? this.rowToMessage(result.rows[0]) : null;
+    } catch (error) {
+      console.error('Error updating message tokens:', error);
+      return null;
+    }
+  }
+
   async getChatHistory(chatId: string): Promise<Message[]> {
     try {
       const result = await this.pool.query(
-        'SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids, book_catalogs FROM messages WHERE chat_id = $1 ORDER BY timestamp ASC',
+        'SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, tokens_used, book_ids, book_catalogs FROM messages WHERE chat_id = $1 ORDER BY timestamp ASC',
         [chatId]
       );
       return result.rows.map((row) => this.rowToMessage(row));
@@ -309,10 +415,41 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
   }
 
+  async getChatsWithStatsByUser(userId: string): Promise<ChatWithStats[]> {
+    try {
+      const query = `
+        SELECT 
+          c.id as chat_id,
+          c.user_id,
+          c.title,
+          c.started_at,
+          c.message_count,
+          c.total_tokens
+        FROM chats c
+        WHERE c.user_id = $1
+        ORDER BY c.started_at DESC
+      `;
+
+      const result = await this.pool.query(query, [userId]);
+
+      return result.rows.map((row) => ({
+        chatId: row.chat_id,
+        userId: row.user_id,
+        title: row.title,
+        startedAt: row.started_at?.toISOString?.() || row.started_at,
+        messageCount: parseInt(row.message_count, 10) || 0,
+        totalTokens: parseInt(row.total_tokens, 10) || 0,
+      }));
+    } catch (error) {
+      console.error('Error getting chats with stats by user:', error);
+      return [];
+    }
+  }
+
   async getUserMessagesInChat(chatId: string, userId: string): Promise<Message[]> {
     try {
       const result = await this.pool.query(
-        `SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, book_ids, book_catalogs
+        `SELECT id, chat_id, sender, text, timestamp, entry_id, msg_id, user_id, tokens_used, book_ids, book_catalogs
          FROM messages WHERE chat_id = $1 AND sender = 'user' AND user_id = $2
          ORDER BY timestamp ASC`,
         [chatId, userId]
@@ -480,6 +617,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       entryId: row.entry_id,
       msg_id: row.msg_id,
       userId: row.user_id,
+      tokensUsed: row.tokens_used,
       bookIds: row.book_ids || undefined,
       bookCatalogs: row.book_catalogs || undefined,
     };

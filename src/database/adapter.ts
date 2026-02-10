@@ -16,6 +16,23 @@ export interface DailyLimit {
   updated_at: string;
 }
 
+export interface UserStats {
+  userId: string;
+  chatCount: number;
+  messageCount: number;
+  totalTokens: number;
+  lastActivity?: string;
+}
+
+export interface ChatWithStats {
+  chatId: string;
+  userId: string;
+  title?: string;
+  startedAt?: string;
+  messageCount: number;
+  totalTokens: number;
+}
+
 export interface DatabaseAdapter {
   // Initialize the database
   init(): Promise<void>;
@@ -29,13 +46,17 @@ export interface DatabaseAdapter {
   updateUserLastSeen(userId: string): Promise<void>;
   listUsers(): Promise<User[]>;
   getUsersPaginated(page: number, limit: number): Promise<{ users: User[]; total: number; page: number; limit: number }>;
+  getUserStats(userId: string): Promise<UserStats | null>;
+  getUsersWithStats(page: number, limit: number): Promise<{ users: (User & UserStats)[]; total: number; page: number; limit: number }>;
 
   // Message/Chat operations
   createChat(chatId: string, userId: string, title?: string): Promise<{ chatId: string; userId: string; startedAt: string } | null>;
   logMessage(chatId: string, sender: 'user' | 'agent', text: string, opts?: { entryId?: string; msg_id?: string; userId?: string; tokensUsed?: number; bookIds?: string[]; bookCatalogs?: Record<string, string> }): Promise<Message | null>;
+  updateMessageTokens(messageId: string, tokensUsed: number): Promise<Message | null>;
   getChatHistory(chatId: string): Promise<Message[]>;
   clearChatHistory(chatId: string): Promise<void>;
   getChatsByUser(userId: string): Promise<{ chatId: string; startedAt?: string }[]>;
+  getChatsWithStatsByUser(userId: string): Promise<ChatWithStats[]>;
   getUserMessagesInChat(chatId: string, userId: string): Promise<Message[]>;
   getFullChatHistory(chatId: string): Promise<Message[]>;
   getAllChatIds(): Promise<string[]>;
