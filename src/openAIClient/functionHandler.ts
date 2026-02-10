@@ -58,7 +58,16 @@ export async function handleFunctionCalls(client: OpenAIClient, functionCallStac
                     break;
                 case "getEntryDetails":
                     if (!options.catalogId) {
-                        throw new Error('catalogId is required for getEntryDetails. Extract it from the conversation history where this book was displayed.');
+                        throw new Error('catalogId is required for getEntryDetails. Extract it from the conversation history where this book was displayed, or search for the entry first to get its catalog_id.');
+                    }
+                    // Prevent using the same ID for both parameters (common mistake when using entryId as catalogId)
+                    if (options.id === options.catalogId) {
+                        throw new Error('catalogId cannot be the same as the entry id. The catalogId must be a catalog UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). If you have the Assistant Entry ID, first search for it using getEntries to find its catalog_id, then use that catalog_id here.');
+                    }
+                    // Validate catalogId format (should be a UUID)
+                    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                    if (!uuidRegex.test(options.catalogId)) {
+                        throw new Error(`catalogId must be a valid UUID format (e.g., "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"). Received: "${options.catalogId}". Extract the catalog_id from search results or conversation history.`);
                     }
                     const originalCatalogId = client.elviraClient.getCatalogId();
                     client.elviraClient.setCatalogId(options.catalogId);

@@ -31,8 +31,13 @@ export async function createSession(
     messageListener: (message: string, msg_id?: string) => {
       console.log(`Agent@${chatId}:`, message);
       messagesQueues[chatId].push({ type: 'message', data: message });
-      // Log agent message to database with msg_id (fire and forget)
-      logMessage(chatId, 'agent', message, { userId, msg_id }).catch((err) => {
+      // Log agent message to database with msg_id and entryId (fire and forget)
+      const session = chatSessions[chatId];
+      logMessage(chatId, 'agent', message, { 
+        userId, 
+        msg_id,
+        entryId: session?.getEntryId() || entryId || undefined
+      }).catch((err) => {
         console.error(`Failed to log agent message for chat ${chatId}:`, err);
       });
     },
@@ -42,7 +47,13 @@ export async function createSession(
       const catalogInfo = bookCatalogs ? JSON.stringify(bookCatalogs) : '{}';
       const messageText = `[Displayed ${bookIds.length} book(s) with IDs: ${bookIds.join(', ')}] [Book Catalogs: ${catalogInfo}]`;
       
-      logMessage(chatId, 'agent', messageText, { userId, bookIds, bookCatalogs }).catch((err) => {
+      const session = chatSessions[chatId];
+      logMessage(chatId, 'agent', messageText, { 
+        userId, 
+        bookIds, 
+        bookCatalogs,
+        entryId: session?.getEntryId() || entryId || undefined
+      }).catch((err) => {
         console.error(`Failed to log book display for chat ${chatId}:`, err);
       });
     },

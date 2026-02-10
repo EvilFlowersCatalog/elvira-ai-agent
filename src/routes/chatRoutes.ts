@@ -127,7 +127,10 @@ router.post('/sendchat', async (req, res: Response) => {
   }
 
   console.log(`User@${chatId}:`, message);
-  const userMessage = await logMessage(chatId, 'user', message, { userId: chatSession.userId });
+  const userMessage = await logMessage(chatId, 'user', message, { 
+    userId: chatSession.userId,
+    entryId: chatSession.getEntryId() || undefined
+  });
 
   try {
     let finished = false;
