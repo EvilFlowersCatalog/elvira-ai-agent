@@ -53,7 +53,7 @@ router.post('/startchat', async (req: AuthenticatedRequest, res: Response) => {
     }
     
     console.log(`Starting new chat: ${chatId}`);
-    await createSession(chatId, entryId || null, elviraClient, user.id);
+    await createSession(chatId, entryId || null, catalogId || null, elviraClient, user.id);
     res.json({ chatId });
   } catch (err) {
     console.error('Error starting chat:', err);
@@ -239,7 +239,7 @@ router.post('/resumechat', async (req: AuthenticatedRequest, res: Response) => {
     }
     
     console.log(`Resuming chat: ${chatId} for user ${user.id}`);
-    await resumeSession(chatId, entryId || null, elviraClient, user.id);
+    await resumeSession(chatId, entryId || null, catalogId || null, elviraClient, user.id);
     
     res.json({ 
       chatId,

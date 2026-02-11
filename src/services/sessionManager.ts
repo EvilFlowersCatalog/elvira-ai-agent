@@ -13,6 +13,7 @@ const messagesQueues: Record<string, MessageQueueItem[]> = {};
 export async function createSession(
   chatId: string,
   entryId: string | null,
+  catalogId: string | null,
   elviraClient: ElviraClient,
   userId: string,
   loadHistory: boolean = false
@@ -62,7 +63,7 @@ export async function createSession(
     }
   };
 
-  const session = new OpenAIClient(entryId, listeners, elviraClient, userId);
+  const session = new OpenAIClient(entryId, catalogId, listeners, elviraClient, userId);
   
   // Load chat history from database if requested
   if (loadHistory) {
@@ -234,6 +235,7 @@ async function loadChatHistoryIntoSession(chatId: string, session: OpenAIClient)
 export async function resumeSession(
   chatId: string,
   entryId: string | null,
+  catalogId: string | null,
   elviraClient: ElviraClient,
   userId: string
 ): Promise<OpenAIClient> {
@@ -246,5 +248,5 @@ export async function resumeSession(
   }
   
   // Create new session with history loaded from database
-  return await createSession(chatId, entryId, elviraClient, userId, true);
+  return await createSession(chatId, entryId, catalogId, elviraClient, userId, true);
 }

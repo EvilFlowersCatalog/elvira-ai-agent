@@ -6,6 +6,7 @@ import { ElviraClient } from '../elviraClient';
 
 export class OpenAIClient {
     private entryId: string | null;
+    private catalogId: string | null = null;
     private openai: OpenAI;
     private chatHistory: ResponseInput;
     private messageListener: (message: string, msg_id?: string) => void;
@@ -15,13 +16,14 @@ export class OpenAIClient {
     public chunkListener: (msg_id: string, chunk: string) => void;
     public elviraClient: ElviraClient;
 
-    constructor(entryId: string | null, listeners: {
+    constructor(entryId: string | null, catalogId: string | null, listeners: {
         messageListener: (message: string, msg_id?: string) => void;
         displayBooksListener: (bookIds: string[], bookCatalogs?: Record<string, string>) => void;
         chunkListener: (msg_id: string, chunk: string) => void;
     }, elviraClient: ElviraClient, userId: string) {
         this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         this.entryId = entryId;
+        this.catalogId = catalogId;
         this.chatHistory = [];
         this.messageListener = listeners.messageListener;
         this.displayBooksListener = listeners.displayBooksListener;
@@ -42,11 +44,12 @@ When recommending books, use the displayBooks function.
 Keep messages short and brief - answer only what was asked.
 
 Assistant Entry ID: ${this.entryId}
-Catalog ID: ${this.entryId ?? "N/A - no entry context"}
+Catalog ID: ${this.catalogId ?? "N/A - no entry context"}
 
 If an Entry ID is provided:
-- Focus responses on that specific entry and related content
+- Focus responses on that specific entry and related content (might be refered to as book, article, item, entry or similar in the conversation)
 - Continue discussing it unless the user changes the topic
+- When user asks "What's the book about?", use getEntryDetails(entryId, catalogId) and return the response.
 
 Available Tools:
 - getEntryDetails(id, catalogId) – Get details for a specific entry. Requires both id and catalogId.
