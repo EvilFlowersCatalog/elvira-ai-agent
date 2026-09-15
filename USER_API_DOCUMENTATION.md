@@ -99,7 +99,7 @@ Authorization: Bearer <api_key>
       "sender": "agent",
       "text": "I can help you find books about AI...",
       "timestamp": "2025-12-11T10:30:15.000Z",
-      "msg_id": "openai-msg-id"
+      "msg_id": "msg_0f8fad5bd9cb469fa165708677289ce2"
     }
   ],
   "messageCount": 12
@@ -389,7 +389,7 @@ await sendMessage(chatId, "Find books about AI");
    - Verifies chat ownership
    - Creates a new in-memory session
    - Loads full conversation history from database
-   - Reconstructs OpenAI conversation context
+   - Reconstructs the Ollama conversation context
 3. **Context Preservation**: The AI maintains full awareness of previous conversation
 4. **Restart Resilience**: Sessions can be resumed even after server restarts
 

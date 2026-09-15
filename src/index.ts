@@ -4,8 +4,8 @@ import { initializeDatabase } from './database';
 
 dotenv.config();
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-if (!OPENAI_API_KEY) throw new Error("Missing OpenAI API key");
+if (!process.env.OLLAMA_ENDPOINT) throw new Error("Missing OLLAMA_ENDPOINT");
+if (!process.env.OLLAMA_MODEL) throw new Error("Missing OLLAMA_MODEL");
 
 async function main() {
   try {

@@ -1,10 +1,10 @@
-import { OpenAIClient } from '../openAIClient/openaiClient';
+import { OllamaClient } from '../ollamaClient/ollamaClient';
 import { ElviraClient } from '../elviraClient';
 import { MessageQueueItem, ChatSessionListeners } from '../types';
 import { clearChatHistory, createChat, logMessage, getFullChatHistory } from '../accounts';
 
 // In-memory stores for chat sessions and message queues
-const chatSessions: Record<string, OpenAIClient> = {};
+const chatSessions: Record<string, OllamaClient> = {};
 const messagesQueues: Record<string, MessageQueueItem[]> = {};
 
 /**
@@ -17,7 +17,7 @@ export async function createSession(
   elviraClient: ElviraClient,
   userId: string,
   loadHistory: boolean = false
-): Promise<OpenAIClient> {
+): Promise<OllamaClient> {
   // Create the chat in the database first (required for foreign key constraint)
   const chat = await createChat(chatId, userId);
   if (!chat) {
@@ -63,7 +63,7 @@ export async function createSession(
     }
   };
 
-  const session = new OpenAIClient(entryId, catalogId, listeners, elviraClient, userId);
+  const session = new OllamaClient(entryId, catalogId, listeners, elviraClient, userId);
   
   // Load chat history from database if requested
   if (loadHistory) {
@@ -78,7 +78,7 @@ export async function createSession(
 /**
  * Retrieves an existing chat session by ID
  */
-export function getSession(chatId: string): OpenAIClient | undefined {
+export function getSession(chatId: string): OllamaClient | undefined {
   return chatSessions[chatId];
 }
 
@@ -160,29 +160,24 @@ export function getActiveSessionCount(): number {
 }
 
 /**
- * Loads chat history from database into an OpenAI session
- * Converts database messages to OpenAI's ResponseInput format
+ * Loads chat history from database into an Ollama session
+ * Converts database messages to the session's chat history format
  * Note: We reconstruct the conversation by alternating user/assistant messages
  */
-async function loadChatHistoryIntoSession(chatId: string, session: OpenAIClient): Promise<void> {
+async function loadChatHistoryIntoSession(chatId: string, session: OllamaClient): Promise<void> {
   try {
     const messages = await getFullChatHistory(chatId);
-    
-    // Convert database messages to OpenAI format
+
+    // Convert database messages to chat history format
     const chatHistory = session.getChatHistory();
-    
+
     // Process messages in conversation order
     for (const msg of messages) {
       if (msg.sender === 'user') {
-        // Add user messages in the standard input format
         chatHistory.push({
+          type: 'message',
           role: 'user',
-          content: [
-            {
-              type: 'input_text',
-              text: msg.text
-            }
-          ]
+          content: msg.text
         });
       } else if (msg.sender === 'agent') {
         let messageId = msg.msg_id;
@@ -207,12 +202,7 @@ async function loadChatHistoryIntoSession(chatId: string, session: OpenAIClient)
           type: 'message',
           id: messageId,
           role: 'assistant',
-          status: 'completed',
-          content: [{
-            type: 'output_text',
-            text: messageText,
-            annotations: []
-          }]
+          content: messageText
         });
         
         if (msg.bookIds && msg.bookIds.length > 0) {
@@ -238,7 +228,7 @@ export async function resumeSession(
   catalogId: string | null,
   elviraClient: ElviraClient,
   userId: string
-): Promise<OpenAIClient> {
+): Promise<OllamaClient> {
   console.log(`Resuming chat session: ${chatId}`);
   
   // If session already exists in memory, return it

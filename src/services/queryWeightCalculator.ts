@@ -3,7 +3,6 @@
  * Determines the weight/cost of a query based on its characteristics
  * Used to dynamically price different types of queries
  */
-import { OpenAIClient } from '../openAIClient/openaiClient';
 
 export interface QueryWeightAnalysis {
   weight: number;

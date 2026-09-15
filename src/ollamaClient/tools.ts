@@ -1,12 +1,10 @@
-import { Tool } from "openai/resources/responses/responses";
+import { ToolDefinition } from "./types";
 
-export function getTools(): Array<Tool> {
+export function getTools(): Array<ToolDefinition> {
     return [
         {
-            "type": "function",
             "name": "getEntryDetails",
             "description": "Elvira - Retrieve entry details using the provided ID and catalogId",
-            "strict": true,
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -22,15 +20,12 @@ export function getTools(): Array<Tool> {
                 "required": [
                     "id",
                     "catalogId"
-                ],
-                "additionalProperties": false
+                ]
             }
         },
         {
-            "type": "function",
             "name": "getEntries",
-            "description": "Elvira - Retrieve entries with pagination and filtering support",
-            "strict": true,
+            "description": "Elvira - Retrieve entries with pagination and filtering support. All filters are optional.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -43,63 +38,51 @@ export function getTools(): Array<Tool> {
                         "description": "Number of entries per page"
                     },
                     "title": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "Filter by title (unaccent, icontains)"
                     },
                     "summary": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "Filter by summary (unaccent, icontains)"
                     },
                     "category_term": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "Filter by category_term (exact)"
                     },
                     "author": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "Filter by author (exact)"
                     },
                     "language_code": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "Filter by language_code (exact)"
                     },
                     "published_at__gte": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "Filter by published date greater than or equal (ISO 8601 format)"
                     },
                     "published_at__lte": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "Filter by published date less than or equal (ISO 8601 format)"
                     },
                     "config__readium_enabled": {
-                        "type": ["boolean", "null"],
+                        "type": "boolean",
                         "description": "Filter by readium enabled status"
                     },
                     "query": {
-                        "type": ["string", "null"],
+                        "type": "string",
                         "description": "Filter by query (exact)"
                     }
                 },
                 "required": [
                     "page",
-                    "limit",
-                    'title',
-                    'author',
-                    'summary',
-                    'category_term',
-                    'language_code',
-                    'published_at__gte',
-                    'published_at__lte',
-                    'config__readium_enabled',
-                    'query'
-                ],
-                "additionalProperties": false
+                    "limit"
+                ]
             }
         },
         {
-            "type": "function",
             "name": "displayBooks",
             "description": "Display books in the UI. Each book must include its catalogId from the entry's catalog_id field.",
-            "strict": true,
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -117,16 +100,14 @@ export function getTools(): Array<Tool> {
                                     "description": "Catalog UUID where this book belongs (from entry.catalog_id field - must be UUID, not slug)"
                                 }
                             },
-                            "required": ["id", "catalogId"],
-                            "additionalProperties": false
+                            "required": ["id", "catalogId"]
                         },
                         "description": "Array of books with their catalog IDs"
                     }
                 },
                 "required": [
                     "books"
-                ],
-                "additionalProperties": false
+                ]
             }
         }
     ];

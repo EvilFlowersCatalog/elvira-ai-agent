@@ -1,8 +1,8 @@
-import { ResponseFunctionToolCall, ResponseInputItem } from "openai/resources/responses/responses";
-import { OpenAIClient } from "./openaiClient";
+import { OllamaClient } from "./ollamaClient";
+import { ChatHistoryItem, ToolCall } from "./types";
 import { EntryFilterOptions } from "../types";
 
-async function displayBooks(client: OpenAIClient, options: { books: Array<{ id: string; catalogId: string }> }) {
+async function displayBooks(client: OllamaClient, options: { books: Array<{ id: string; catalogId: string }> }) {
     // Validate books array and that each book has catalogId
     if (!options.books || options.books.length === 0) {
         throw new Error('books array is required for displayBooks.');
@@ -12,13 +12,13 @@ async function displayBooks(client: OpenAIClient, options: { books: Array<{ id: 
             throw new Error(`catalogId is required for book ${book.id}. Extract it from the entry's catalog_id field.`);
         }
     }
-    
+
     const bookIds = options.books.map(b => b.id);
     const bookCatalogs: Record<string, string> = {};
     options.books.forEach(book => {
         bookCatalogs[book.id] = book.catalogId;
     });
-    
+
     client.displayBooksListener(bookIds, bookCatalogs);
     return { success: true };
 }
@@ -28,7 +28,7 @@ async function displayBooks(client: OpenAIClient, options: { books: Array<{ id: 
  */
 function extractFilters(options: any): EntryFilterOptions | undefined {
     const filters: EntryFilterOptions = {};
-    
+
     if (options.title) filters.title = options.title;
     if (options.summary) filters.summary = options.summary;
     if (options.category_term) filters.category_term = options.category_term;
@@ -36,21 +36,21 @@ function extractFilters(options: any): EntryFilterOptions | undefined {
     if (options.language_code) filters.language_code = options.language_code;
     if (options.published_at__gte) filters.published_at__gte = options.published_at__gte;
     if (options.published_at__lte) filters.published_at__lte = options.published_at__lte;
-    if (options.config__readium_enabled !== undefined) filters.config__readium_enabled = options.config__readium_enabled;
+    if (options.config__readium_enabled !== undefined && options.config__readium_enabled !== null) filters.config__readium_enabled = options.config__readium_enabled;
     if (options.query) filters.query = options.query;
-    
+
     return Object.keys(filters).length > 0 ? filters : undefined;
 }
 
-export async function handleFunctionCalls(client: OpenAIClient, functionCallStack: ResponseFunctionToolCall[]): Promise<ResponseInputItem[]> {
-    const output: ResponseInputItem[] = [];
-    for (const item of functionCallStack) {
-        const options = JSON.parse(item.arguments);
-        var result;
+export async function handleFunctionCalls(client: OllamaClient, toolCalls: ToolCall[]): Promise<ChatHistoryItem[]> {
+    const output: ChatHistoryItem[] = [];
+    for (const item of toolCalls) {
+        const options = item.arguments;
+        let result;
         try {
             switch (item.name) {
                 case "displayBooks":
-                    result = await displayBooks(client, options);
+                    result = await displayBooks(client, options as { books: Array<{ id: string; catalogId: string }> });
                     break;
                 case "getEntries":
                     const filters = extractFilters(options);
@@ -83,15 +83,17 @@ export async function handleFunctionCalls(client: OpenAIClient, functionCallStac
                     break;
             }
             output.push({
-                type: "function_call_output",
-                call_id: item.call_id,
+                type: "tool_result",
+                callId: item.id,
+                name: item.name,
                 output: JSON.stringify(result || {success: false, error: 'Unknown error occurred'})
             });
         } catch (error) {
             console.error("Error handling function call:", error);
             output.push({
-                type: "function_call_output",
-                call_id: item.call_id,
+                type: "tool_result",
+                callId: item.id,
+                name: item.name,
                 output: JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' })
             });
         }
